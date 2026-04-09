@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
 import { MATCHES as ALL_MATCHES, type Match } from "@/lib/matches";
 import { auth, db } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, type User } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import AuthDialog from "@/app/components/AuthDialog";
 
 type Prediction = {
   winner: "A" | "B" | "draw" | null;
@@ -398,12 +399,15 @@ function PredictDialog({
 /* ─── Match Row ─── */
 function MatchRow({
   match,
+  user,
   initialSaved,
 }: {
   match: Match;
+  user: User | null;
   initialSaved?: Prediction;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
   const [saved, setSaved] = useState<Prediction | null>(initialSaved ?? null);
 
   useEffect(() => {
@@ -423,14 +427,32 @@ function MatchRow({
     [match],
   );
 
-  const isSaved = !!saved?.winner || !!(saved?.scoreA && saved?.scoreB);
+  function openPredict() {
+    if (!user) {
+      setAuthOpen(true);
+    } else {
+      setDialogOpen(true);
+    }
+  }
+
+  function pickLabel(): string | null {
+    if (!saved) return null;
+    if (saved.scoreA !== "" && saved.scoreB !== "") return `${saved.scoreA} – ${saved.scoreB}`;
+    if (saved.winner === "A") return match.teamA.name;
+    if (saved.winner === "B") return match.teamB.name;
+    if (saved.winner === "draw") return "Draw";
+    return null;
+  }
+
+  const pick = pickLabel();
 
   return (
     <>
       {/* Row */}
       <div
-        className="flex items-center gap-3 sm:gap-5 px-4 sm:px-7 py-4 transition-colors"
+        className="flex items-center gap-3 sm:gap-5 px-4 sm:px-7 py-4 transition-colors cursor-pointer"
         style={{ background: "#fff", borderBottom: "1px solid #f0f0f0" }}
+        onClick={openPredict}
         onMouseEnter={(e) => (e.currentTarget.style.background = "#fff9f3")}
         onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
       >
@@ -479,46 +501,39 @@ function MatchRow({
         </div>
 
         {/* Action */}
-        <div
-          className="flex-shrink-0 pl-1.5 sm:pl-3 min-w-[52px] sm:min-w-[60px] text-right"
-          style={{ pointerEvents: "auto", zIndex: 10 }}
-        >
-          {isSaved ? (
+        <div className="flex-shrink-0 pl-1.5 sm:pl-3 min-w-[52px] sm:min-w-[70px] text-right">
+          {pick ? (
             <div className="flex flex-col items-end gap-0.5">
-              <span className="text-[11px] sm:text-xs font-semibold text-green-600">
-                ✓ Saved
-              </span>
-              <button
-                type="button"
-                className="px-2 py-1 sm:px-2 sm:py-0.5 text-[11px] sm:text-xs font-bold underline underline-offset-2 transition-opacity hover:opacity-70 active:scale-95 cursor-pointer touch-none"
-                style={{
-                  color: "#ee7e01",
-                  touchAction: "manipulation",
-                  pointerEvents: "auto",
-                }}
-                onClick={() => setDialogOpen(true)}
+              <span
+                className="text-[10px] sm:text-xs font-black truncate max-w-[64px] sm:max-w-[80px]"
+                style={{ color: "#ee7e01" }}
               >
-                Edit
-              </button>
+                {pick}
+              </span>
+              <span className="text-[9px] sm:text-[10px] text-gray-400 font-medium">
+                tap to edit
+              </span>
             </div>
           ) : (
-            <button
-              type="button"
-              className="px-2 py-1 sm:px-2 sm:py-0.5 text-xs sm:text-sm font-bold underline underline-offset-2 transition-opacity hover:opacity-70 active:scale-95 cursor-pointer touch-none"
-              style={{
-                color: "#ee7e01",
-                touchAction: "manipulation",
-                pointerEvents: "auto",
-              }}
-              onClick={() => setDialogOpen(true)}
-            >
+            <span className="text-xs sm:text-sm font-bold" style={{ color: "#ee7e01" }}>
               Predict
-            </button>
+            </span>
           )}
         </div>
       </div>
 
-      {/* Dialog portal */}
+      {/* Auth gate */}
+      {authOpen && (
+        <AuthDialog
+          onClose={() => setAuthOpen(false)}
+          onSuccess={() => {
+            setAuthOpen(false);
+            setDialogOpen(true);
+          }}
+        />
+      )}
+
+      {/* Predict dialog */}
       {dialogOpen && (
         <PredictDialog
           match={match}
@@ -534,16 +549,18 @@ function MatchRow({
 /* ─── Section ─── */
 export default function MatchDashboard() {
   const [savedByMatch, setSavedByMatch] = useState<Saved>({});
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
+    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser);
+      if (!firebaseUser) {
         setSavedByMatch({});
         return;
       }
 
       try {
-        const snap = await getDoc(doc(db, "users", user.uid));
+        const snap = await getDoc(doc(db, "users", firebaseUser.uid));
         if (!snap.exists()) {
           setSavedByMatch({});
           return;
@@ -602,6 +619,7 @@ export default function MatchDashboard() {
             <MatchRow
               key={match.id}
               match={match}
+              user={user}
               initialSaved={savedByMatch[match.id]}
             />
           ))}

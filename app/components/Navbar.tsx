@@ -195,7 +195,7 @@ export default function Navbar() {
               Matches
             </Link>
             <Link
-              href="/#leaderboard"
+              href="/leaderboard"
               className="text-gray-500 hover:text-[#ee7e01] transition-colors"
             >
               Leaderboard
@@ -210,32 +210,6 @@ export default function Navbar() {
 
           {/* Profile */}
           <div className="hidden md:flex items-center gap-3">
-            <Link
-              href="/leaderboard"
-              title="Open leaderboard"
-              aria-label="Open leaderboard"
-              className="w-10 h-10 rounded-full flex items-center justify-center transition-colors"
-              style={{
-                background: "#fff7ed",
-                border: "1px solid rgba(238,126,1,0.25)",
-                color: "#ee7e01",
-              }}
-            >
-              <svg
-                className="w-5 h-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                aria-hidden="true"
-              >
-                <path d="M8 21h8" />
-                <path d="M12 17v4" />
-                <path d="M7 4h10v2a5 5 0 0 1-10 0V4Z" />
-                <path d="M7 6H5a2 2 0 0 0 2 2" />
-                <path d="M17 6h2a2 2 0 0 1-2 2" />
-              </svg>
-            </Link>
             <div className="relative" ref={desktopProfileWrapRef}>
               <button
                 type="button"
@@ -301,7 +275,7 @@ export default function Navbar() {
               Matches
             </Link>
             <Link
-              href="/#leaderboard"
+              href="/leaderboard"
               className="text-gray-600 hover:text-[#ee7e01] transition-colors"
               onClick={() => setMenuOpen(false)}
             >
@@ -315,33 +289,6 @@ export default function Navbar() {
               Join Free
             </Link>
             <div className="flex items-center gap-3 pt-2">
-              <Link
-                href="/leaderboard"
-                title="Open leaderboard"
-                aria-label="Open leaderboard"
-                className="w-10 h-10 rounded-full flex items-center justify-center transition-colors"
-                style={{
-                  background: "#fff7ed",
-                  border: "1px solid rgba(238,126,1,0.25)",
-                  color: "#ee7e01",
-                }}
-                onClick={() => setMenuOpen(false)}
-              >
-                <svg
-                  className="w-5 h-5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  aria-hidden="true"
-                >
-                  <path d="M8 21h8" />
-                  <path d="M12 17v4" />
-                  <path d="M7 4h10v2a5 5 0 0 1-10 0V4Z" />
-                  <path d="M7 6H5a2 2 0 0 0 2 2" />
-                  <path d="M17 6h2a2 2 0 0 1-2 2" />
-                </svg>
-              </Link>
               <div className="relative" ref={mobileProfileWrapRef}>
                 <button
                   type="button"

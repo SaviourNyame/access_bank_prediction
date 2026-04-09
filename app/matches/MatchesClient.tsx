@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import Link from "next/link";
-import Image from "next/image";
+import { useState, useEffect, useCallback } from "react";
 import { MATCHES, type Match, type Round } from "@/lib/matches";
 import { auth, db } from "@/lib/firebase";
-import { onAuthStateChanged, signOut, type User } from "firebase/auth";
+import { onAuthStateChanged, type User } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import AuthDialog from "@/app/components/AuthDialog";
+import Navbar from "@/app/components/Navbar";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Prediction = {
@@ -67,100 +67,6 @@ async function persistPrediction(match: Match, pred: Prediction) {
       updatedAt: serverTimestamp(),
     },
     { merge: true },
-  );
-}
-
-function ProfileDropdown({
-  user,
-  points,
-  onSignOut,
-  totalSaved,
-}: {
-  user: User | null;
-  points: number;
-  onSignOut: () => void;
-  totalSaved: number;
-}) {
-  return (
-    <div
-      className="absolute right-0 top-[calc(100%+10px)] w-[min(90vw,320px)] rounded-2xl p-4 z-[70]"
-      style={{
-        background: "#ffffff",
-        border: "1px solid #e5e7eb",
-        boxShadow: "0 16px 38px rgba(17,24,39,0.16)",
-      }}
-    >
-      <div className="mb-3">
-        <p className="text-xs uppercase tracking-widest text-gray-400 font-bold">
-          Profile
-        </p>
-      </div>
-
-      {user ? (
-        <>
-          <div className="space-y-2">
-            <div className="text-sm">
-              <span className="text-gray-500">Name: </span>
-              <span className="font-semibold text-gray-900">
-                {user.displayName || "No display name"}
-              </span>
-            </div>
-            <div className="text-sm break-all">
-              <span className="text-gray-500">Email: </span>
-              <span className="font-semibold text-gray-900">{user.email}</span>
-            </div>
-            <div className="text-xs break-all text-gray-500">
-              User ID: {user.uid}
-            </div>
-          </div>
-
-          <div
-            className="mt-4 mb-3 px-3 py-2 rounded-xl flex items-center justify-between"
-            style={{
-              background: "#f9fafb",
-              border: "1px solid #e5e7eb",
-            }}
-          >
-            <span className="text-sm font-semibold text-gray-700">
-              Total Predictions Saved
-            </span>
-            <span className="text-base font-black" style={{ color: "#ee7e01" }}>
-              {totalSaved}
-            </span>
-          </div>
-
-          <div
-            className="mb-3 px-3 py-2 rounded-xl flex items-center justify-between"
-            style={{
-              background: "rgba(238,126,1,0.08)",
-              border: "1px solid rgba(238,126,1,0.22)",
-            }}
-          >
-            <span className="text-sm font-semibold text-gray-700">
-              Total Points
-            </span>
-            <span className="text-base font-black" style={{ color: "#ee7e01" }}>
-              {points}
-            </span>
-          </div>
-
-          <button
-            type="button"
-            onClick={onSignOut}
-            className="w-full rounded-xl py-2.5 text-sm font-bold transition-colors"
-            style={{
-              background: "#fff1f2",
-              border: "1px solid #fecdd3",
-              color: "#be123c",
-            }}
-          >
-            Sign Out
-          </button>
-        </>
-      ) : (
-        <p className="text-sm text-gray-600">You are not signed in yet.</p>
-      )}
-    </div>
   );
 }
 
@@ -533,6 +439,15 @@ function PredictDialog({
 }
 
 // ─── Match Row ────────────────────────────────────────────────────────────────
+function pickSummary(saved: Prediction | undefined, match: Match): string | null {
+  if (!saved) return null;
+  if (saved.scoreA !== "" && saved.scoreB !== "") return `${saved.scoreA} – ${saved.scoreB}`;
+  if (saved.winner === "A") return match.teamA.name;
+  if (saved.winner === "B") return match.teamB.name;
+  if (saved.winner === "draw") return "Draw";
+  return null;
+}
+
 function MatchRow({
   match,
   saved,
@@ -542,11 +457,12 @@ function MatchRow({
   saved?: Prediction;
   onPredict: () => void;
 }) {
-  const isSaved = !!saved?.winner || !!(saved?.scoreA && saved?.scoreB);
+  const pick = pickSummary(saved, match);
   return (
     <div
-      className="flex items-center gap-3 sm:gap-5 px-4 sm:px-7 py-4 transition-colors"
+      className="flex items-center gap-3 sm:gap-5 px-4 sm:px-7 py-4 transition-colors cursor-pointer"
       style={{ background: "#fff", borderBottom: "1px solid #f0f0f0" }}
+      onClick={onPredict}
       onMouseEnter={(e) => (e.currentTarget.style.background = "#fff9f3")}
       onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
     >
@@ -605,41 +521,26 @@ function MatchRow({
       </div>
 
       {/* Action */}
-      <div
-        className="flex-shrink-0 pl-1.5 sm:pl-3 min-w-[52px] sm:min-w-[60px] text-right"
-        style={{ pointerEvents: "auto", zIndex: 10 }}
-      >
-        {isSaved ? (
+      <div className="flex-shrink-0 pl-1.5 sm:pl-3 min-w-[52px] sm:min-w-[70px] text-right">
+        {pick ? (
           <div className="flex flex-col items-end gap-0.5">
-            <span className="text-[11px] sm:text-xs font-semibold text-green-600">
-              ✓ Saved
-            </span>
-            <button
-              type="button"
-              className="px-2 py-1 sm:px-2 sm:py-0.5 text-[11px] sm:text-xs font-bold underline underline-offset-2 transition-opacity hover:opacity-70 active:scale-95 cursor-pointer touch-none"
-              style={{
-                color: "#ee7e01",
-                touchAction: "manipulation",
-                pointerEvents: "auto",
-              }}
-              onClick={onPredict}
+            <span
+              className="text-[10px] sm:text-xs font-black truncate max-w-[64px] sm:max-w-[80px]"
+              style={{ color: "#ee7e01" }}
             >
-              Edit
-            </button>
+              {pick}
+            </span>
+            <span className="text-[9px] sm:text-[10px] text-gray-400 font-medium">
+              tap to edit
+            </span>
           </div>
         ) : (
-          <button
-            type="button"
-            className="px-2 py-1 sm:px-2 sm:py-0.5 text-xs sm:text-sm font-bold underline underline-offset-2 transition-opacity hover:opacity-70 active:scale-95 cursor-pointer touch-none"
-            style={{
-              color: "#ee7e01",
-              touchAction: "manipulation",
-              pointerEvents: "auto",
-            }}
-            onClick={onPredict}
+          <span
+            className="text-xs sm:text-sm font-bold"
+            style={{ color: "#ee7e01" }}
           >
             Predict
-          </button>
+          </span>
         )}
       </div>
     </div>
@@ -688,33 +589,21 @@ export default function MatchesClient() {
   const [activeRound, setActiveRound] = useState<Round | "all">("all");
   const [saved, setSaved] = useState<Saved>({});
   const [dialog, setDialog] = useState<Match | null>(null);
+  const [authPending, setAuthPending] = useState<Match | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [points, setPoints] = useState(0);
-  const profileWrapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        setUser(null);
-        setPoints(0);
+    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser);
+      if (!firebaseUser) {
         setSaved({});
-        setProfileOpen(false);
         return;
       }
 
-      setUser(user);
-
       try {
-        const snap = await getDoc(doc(db, "users", user.uid));
-        if (!snap.exists()) {
-          setPoints(0);
-          setSaved({});
-          return;
-        }
-
-        const data = snap.data() as { picks?: unknown; points?: unknown };
-        setPoints(typeof data.points === "number" ? data.points : 0);
+        const snap = await getDoc(doc(db, "users", firebaseUser.uid));
+        if (!snap.exists()) { setSaved({}); return; }
+        const data = snap.data() as { picks?: unknown };
         setSaved(toSavedPicks(data.picks));
       } catch (err: unknown) {
         console.error("Failed to load saved predictions", err);
@@ -724,38 +613,14 @@ export default function MatchesClient() {
     return () => unsub();
   }, []);
 
-  useEffect(() => {
-    function handleOutsideClick(e: MouseEvent) {
-      if (!profileWrapRef.current) return;
-      if (!profileWrapRef.current.contains(e.target as Node)) {
-        setProfileOpen(false);
-      }
-    }
-
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setProfileOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleOutsideClick);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, []);
-
   const filteredMatches =
     activeRound === "all"
       ? MATCHES
       : MATCHES.filter((m) => m.round === activeRound);
-  const totalSaved = Object.keys(saved).length;
 
   const handleSave = useCallback(
     (pred: Prediction) => {
       if (!dialog) return;
-
       setSaved((s) => ({ ...s, [dialog.id]: pred }));
       void persistPrediction(dialog, pred).catch((err: unknown) => {
         console.error("Failed to save prediction to Firestore", err);
@@ -774,115 +639,9 @@ export default function MatchesClient() {
     })),
   ];
 
-  const profileInitial =
-    user?.displayName?.charAt(0)?.toUpperCase() ||
-    user?.email?.charAt(0)?.toUpperCase() ||
-    "U";
-
-  const profileNode = user ? (
-    <span>{profileInitial}</span>
-  ) : (
-    <svg
-      className="w-5 h-5"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6" />
-    </svg>
-  );
-
   return (
     <div className="min-h-screen bg-[#f7f8fa]">
-      {/* Navbar */}
-      <nav className="sticky top-0 z-40 glass-nav px-4 sm:px-6 lg:px-8">
-        <div className="max-w-5xl mx-auto flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-3">
-            <Image
-              src="/logo.png"
-              alt="Access Bank"
-              width={110}
-              height={36}
-              className="object-contain"
-              priority
-            />
-            <div className="hidden sm:block h-5 w-px bg-gray-200" />
-            <span className="hidden sm:block text-xs font-bold text-gray-400 tracking-wide">
-              World Cup Predictions
-            </span>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/leaderboard"
-              title="Open leaderboard"
-              aria-label="Open leaderboard"
-              className="w-10 h-10 rounded-full flex items-center justify-center transition-colors"
-              style={{
-                background: "#fff7ed",
-                border: "1px solid rgba(238,126,1,0.25)",
-                color: "#ee7e01",
-              }}
-            >
-              <svg
-                className="w-5 h-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                aria-hidden="true"
-              >
-                <path d="M8 21h8" />
-                <path d="M12 17v4" />
-                <path d="M7 4h10v2a5 5 0 0 1-10 0V4Z" />
-                <path d="M7 6H5a2 2 0 0 0 2 2" />
-                <path d="M17 6h2a2 2 0 0 1-2 2" />
-              </svg>
-            </Link>
-            <Link
-              href="/"
-              className="text-sm font-semibold text-gray-500 hover:text-[#ee7e01] transition-colors"
-            >
-              ← Home
-            </Link>
-            <div className="relative" ref={profileWrapRef}>
-              <button
-                type="button"
-                title={user ? (user.email ?? "Profile") : "Profile"}
-                onClick={() => setProfileOpen((open) => !open)}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-black transition-colors active:scale-95 cursor-pointer"
-                style={{
-                  background: user ? "rgba(238,126,1,0.15)" : "#f3f4f6",
-                  border: user
-                    ? "1px solid rgba(238,126,1,0.35)"
-                    : "1px solid #e5e7eb",
-                  color: user ? "#ee7e01" : "#6b7280",
-                  touchAction: "manipulation",
-                }}
-                aria-haspopup="menu"
-                aria-expanded={profileOpen}
-                aria-label="Open profile menu"
-              >
-                {profileNode}
-              </button>
-
-              {profileOpen && (
-                <ProfileDropdown
-                  user={user}
-                  points={points}
-                  totalSaved={totalSaved}
-                  onSignOut={() => {
-                    void signOut(auth);
-                    setProfileOpen(false);
-                  }}
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Page header */}
@@ -974,7 +733,13 @@ export default function MatchesClient() {
                     key={match.id}
                     match={match}
                     saved={saved[match.id]}
-                    onPredict={() => setDialog(match)}
+                    onPredict={() => {
+                      if (!user) {
+                        setAuthPending(match);
+                      } else {
+                        setDialog(match);
+                      }
+                    }}
                   />
                 ))}
               </div>
@@ -991,7 +756,19 @@ export default function MatchesClient() {
         </p>
       </main>
 
-      {/* Dialog */}
+      {/* Auth gate */}
+      {authPending && (
+        <AuthDialog
+          onClose={() => setAuthPending(null)}
+          onSuccess={() => {
+            const match = authPending;
+            setAuthPending(null);
+            setDialog(match);
+          }}
+        />
+      )}
+
+      {/* Predict dialog */}
       {dialog && (
         <PredictDialog
           match={dialog}
