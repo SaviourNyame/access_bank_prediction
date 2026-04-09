@@ -1,26 +1,206 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-orange: #ee7e01;
+  --color-orange-dark: #c96800;
+  --color-orange-light: #ffaa44;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --background: #f7f8fa;
+  --foreground: #111827;
+  --orange: #ee7e01;
+  --orange-dark: #c96800;
+  --orange-glow: rgba(238, 126, 1, 0.3);
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-blur: blur(16px);
+  --card-bg: #ffffff;
+  --border: #e5e7eb;
+  --muted: #6b7280;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
+
+/* Light glassmorphism */
+.glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+}
+
+/* Navbar glass */
+.glass-nav {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(238, 126, 1, 0.15);
+  box-shadow: 0 1px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* Orange CTA buttons */
+.btn-orange {
+  background: linear-gradient(135deg, #ee7e01 0%, #c96800 100%);
+  color: white;
+  border: none;
+  border-radius: 0;
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+
+.btn-orange:hover {
+  background: linear-gradient(135deg, #ffaa44 0%, #ee7e01 100%);
+  box-shadow: 0 4px 20px rgba(238, 126, 1, 0.45);
+  transform: translateY(-1px);
+}
+
+/* Hero section light */
+.hero-bg {
+  background:
+    radial-gradient(ellipse at 15% 50%, rgba(238, 126, 1, 0.08) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 20%, rgba(238, 126, 1, 0.05) 0%, transparent 45%),
+    linear-gradient(180deg, #fff8f0 0%, #f7f8fa 60%, #f7f8fa 100%);
+}
+
+/* Stadium grid pattern */
+.stadium-pattern {
+  background-image:
+    linear-gradient(rgba(238, 126, 1, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(238, 126, 1, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Match row */
+.match-row {
+  background: #ffffff;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.2s ease;
+}
+.match-row:hover {
+  background: #fff9f3;
+}
+.match-row:last-child {
+  border-bottom: none;
+}
+
+/* Team badge circle */
+.team-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+  border: 2px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+.match-row:hover .team-badge {
+  transform: scale(1.08);
+}
+
+/* Predict link */
+.predict-link {
+  color: #ee7e01;
+  font-weight: 700;
+  font-size: 0.875rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.2s ease, opacity 0.2s ease;
+  cursor: pointer;
+  white-space: nowrap;
+  background: none;
+  border: none;
+}
+.predict-link:hover {
+  color: #c96800;
+  opacity: 0.85;
+}
+
+/* Prediction expand panel */
+.predict-panel {
+  background: #fffaf5;
+  border-top: 1px solid rgba(238, 126, 1, 0.12);
+  overflow: hidden;
+  transition: max-height 0.35s ease;
+}
+
+/* Orange glow effects */
+.orange-glow {
+  box-shadow: 0 4px 20px rgba(238, 126, 1, 0.35);
+}
+
+/* Rank gradients */
+.rank-gold {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.rank-silver {
+  background: linear-gradient(135deg, #9ca3af, #6b7280);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.rank-bronze {
+  background: linear-gradient(135deg, #cd7f32, #a0522d);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Social icon */
+.social-icon {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #6b7280;
+}
+.social-icon:hover {
+  border-color: #ee7e01;
+  color: #ee7e01;
+  background: #fff4e6;
+}
+
+/* Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+@keyframes pulse-orange {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(238, 126, 1, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(238, 126, 1, 0); }
+}
+
+.animate-float { animation: float 4s ease-in-out infinite; }
+.animate-fade-in-up { animation: fade-in-up 0.6s ease forwards; }
+.animate-glow-pulse { animation: glow-pulse 2.5s ease-in-out infinite; }
+.animate-pulse-orange { animation: pulse-orange 2s infinite; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #f3f4f6; }
+::-webkit-scrollbar-thumb { background: #ee7e01; border-radius: 3px; }
