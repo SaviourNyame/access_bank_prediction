@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
-import dynamic from "next/dynamic";
 import Navbar from "@/app/components/Navbar";
 import Footer from "@/app/components/Footer";
-
-const Leaderboard = dynamic(() => import("@/app/components/Leaderboard"), {
-  ssr: false,
-});
+import { Leaderboard } from "@/app/components/ClientComponents";
 
 export const metadata: Metadata = {
   title: "Leaderboard · Access Bank World Cup Predictions",
