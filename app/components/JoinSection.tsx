@@ -335,33 +335,6 @@ export default function JoinSection() {
             </form>
           )}
         </div>
-
-        {/* Points breakdown */}
-        <div className="mt-6 grid grid-cols-2 gap-4">
-          {[
-            { icon: "🟠", label: "Winner Prediction", points: "+3 pts" },
-            { icon: "🎯", label: "Exact Score", points: "+10 pts" },
-          ].map((item) => (
-            <div
-              key={item.label}
-              className="bg-white rounded-2xl p-4 flex items-center gap-3"
-              style={{
-                border: "1.5px solid #e5e7eb",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-              }}
-            >
-              <span className="text-xl">{item.icon}</span>
-              <div>
-                <div className="text-sm font-semibold text-gray-800">
-                  {item.label}
-                </div>
-                <div className="text-xs font-bold" style={{ color: "#ee7e01" }}>
-                  {item.points}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
     </section>
   );
