@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import MatchesClient from "./MatchesClient";
+import dynamic from "next/dynamic";
+
+const MatchesClient = dynamic(() => import("./MatchesClient"), { ssr: false });
 
 export const metadata: Metadata = {
   title: "Matches · Access Bank World Cup Predictions",

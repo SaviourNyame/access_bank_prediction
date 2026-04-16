@@ -1,10 +1,22 @@
+import dynamic from "next/dynamic";
 import Navbar from "./components/Navbar";
 import HeroSection from "./components/HeroSection";
 import JoinSection from "./components/JoinSection";
-import MatchDashboard from "./components/MatchDashboard";
-import Leaderboard from "./components/Leaderboard";
 import Footer from "./components/Footer";
-import TodayMatchesPopup from "./components/TodayMatchesPopup";
+
+// Firebase-dependent components must not run during SSR — they use
+// browser-only APIs and the Firebase client SDK which crashes the
+// Vercel server renderer when imported at the module level.
+const MatchDashboard = dynamic(() => import("./components/MatchDashboard"), {
+  ssr: false,
+});
+const Leaderboard = dynamic(() => import("./components/Leaderboard"), {
+  ssr: false,
+});
+const TodayMatchesPopup = dynamic(
+  () => import("./components/TodayMatchesPopup"),
+  { ssr: false },
+);
 
 export default function Home() {
   return (
