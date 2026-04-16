@@ -161,6 +161,7 @@ export default function TodayMatchesPopup() {
             background: "#ffffff",
             border: "1px solid #e5e7eb",
             boxShadow: "0 32px 80px rgba(0,0,0,0.25)",
+            minHeight: "520px",
             maxHeight: "92dvh",
           }}
         >
@@ -457,7 +458,7 @@ function CouponCode() {
 // ─── Success Screen ───────────────────────────────────────────────────────────
 function SuccessScreen({ onClose }: { onClose: () => void }) {
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col flex-1 overflow-y-auto">
       {/* Dark header */}
       <div
         className="relative px-6 pt-8 pb-6 text-white text-center"
@@ -578,6 +579,16 @@ function SuccessScreen({ onClose }: { onClose: () => void }) {
         </div>
       </div>
 
+      {/* Close button at bottom */}
+      <div className="flex-shrink-0 px-5 pt-3 pb-6">
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full py-2 text-xs font-semibold text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          Close
+        </button>
+      </div>
     </div>
   );
 }
