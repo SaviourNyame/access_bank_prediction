@@ -437,7 +437,8 @@ function MatchRow({
 
   function pickLabel(): string | null {
     if (!saved) return null;
-    if (saved.scoreA !== "" && saved.scoreB !== "") return `${saved.scoreA} – ${saved.scoreB}`;
+    if (saved.scoreA !== "" && saved.scoreB !== "")
+      return `${saved.scoreA} – ${saved.scoreB}`;
     if (saved.winner === "A") return match.teamA.name;
     if (saved.winner === "B") return match.teamB.name;
     if (saved.winner === "draw") return "Draw";
@@ -515,7 +516,10 @@ function MatchRow({
               </span>
             </div>
           ) : (
-            <span className="text-xs sm:text-sm font-bold" style={{ color: "#ee7e01" }}>
+            <span
+              className="text-xs sm:text-sm font-bold"
+              style={{ color: "#ee7e01" }}
+            >
               Predict
             </span>
           )}
@@ -582,16 +586,8 @@ export default function MatchDashboard() {
         {/* Section header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
           <div>
-            <span
-              className="inline-block px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-3"
-              style={{
-                color: "#ee7e01",
-              }}
-            >
-              Live Predictions
-            </span>
             <h2 className="text-4xl sm:text-5xl font-black text-gray-900">
-              Match Dashboard
+              Todays Matches
             </h2>
           </div>
           <div className="flex gap-5 text-sm text-gray-500">
