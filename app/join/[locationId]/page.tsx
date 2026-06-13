@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import JoinSection, { SIGNUP_LOCATIONS } from "@/app/components/JoinSection";
+import JoinSection from "@/app/components/JoinSection";
+import { SIGNUP_LOCATIONS } from "@/lib/locations";
 
 type PageProps = {
   params: Promise<{ locationId: string }>;
