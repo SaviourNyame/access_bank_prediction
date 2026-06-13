@@ -9,11 +9,50 @@ import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import AuthDialog from "@/app/components/AuthDialog";
 
 type Prediction = {
-  winner: "A" | "B" | "draw" | null;
-  scoreA: string;
-  scoreB: string;
+  selectedOption:
+    | "firstHalfWinner"
+    | "firstHalfFirstGoal"
+    | "fullTimeWinner"
+    | "fullTimeFirstGoal"
+    | null;
+  firstHalfWinner: "A" | "B" | "draw" | null;
+  firstHalfFirstGoal: "A" | "B" | "none" | null;
+  fullTimeWinner: "A" | "B" | "draw" | null;
+  fullTimeFirstGoal: "A" | "B" | "none" | null;
 };
 type Saved = Record<number, Prediction>;
+
+function hasPrediction(p: Prediction | null | undefined): boolean {
+  if (!p) return false;
+  switch (p.selectedOption) {
+    case "firstHalfWinner":
+      return p.firstHalfWinner !== null;
+    case "firstHalfFirstGoal":
+      return p.firstHalfFirstGoal !== null;
+    case "fullTimeWinner":
+      return p.fullTimeWinner !== null;
+    case "fullTimeFirstGoal":
+      return p.fullTimeFirstGoal !== null;
+    default:
+      return false;
+  }
+}
+
+function inferSelectedOption(p: Prediction): Prediction["selectedOption"] {
+  if (p.firstHalfWinner !== null) return "firstHalfWinner";
+  if (p.firstHalfFirstGoal !== null) return "firstHalfFirstGoal";
+  if (p.fullTimeWinner !== null) return "fullTimeWinner";
+  if (p.fullTimeFirstGoal !== null) return "fullTimeFirstGoal";
+  return null;
+}
+
+const EMPTY_PREDICTION: Prediction = {
+  selectedOption: null,
+  firstHalfWinner: null,
+  firstHalfFirstGoal: null,
+  fullTimeWinner: null,
+  fullTimeFirstGoal: null,
+};
 
 function toSavedPicks(rawPicks: unknown): Saved {
   if (!rawPicks || typeof rawPicks !== "object") return {};
@@ -25,17 +64,56 @@ function toSavedPicks(rawPicks: unknown): Saved {
     if (!pick || typeof pick !== "object") continue;
 
     const row = pick as Record<string, unknown>;
-    const winner =
-      row.winner === "A" || row.winner === "B" || row.winner === "draw"
-        ? row.winner
+    const firstHalfWinner =
+      row.firstHalfWinner === "A" ||
+      row.firstHalfWinner === "B" ||
+      row.firstHalfWinner === "draw"
+        ? row.firstHalfWinner
+        : null;
+    const firstHalfFirstGoal =
+      row.firstHalfFirstGoal === "A" ||
+      row.firstHalfFirstGoal === "B" ||
+      row.firstHalfFirstGoal === "none"
+        ? row.firstHalfFirstGoal
+        : null;
+    const fullTimeWinner =
+      row.fullTimeWinner === "A" ||
+      row.fullTimeWinner === "B" ||
+      row.fullTimeWinner === "draw"
+        ? row.fullTimeWinner
+        : row.winner === "A" || row.winner === "B" || row.winner === "draw"
+          ? row.winner
+          : null;
+    const fullTimeFirstGoal =
+      row.fullTimeFirstGoal === "A" ||
+      row.fullTimeFirstGoal === "B" ||
+      row.fullTimeFirstGoal === "none"
+        ? row.fullTimeFirstGoal
         : null;
 
-    const scoreA = typeof row.scoreA === "string" ? row.scoreA : "";
-    const scoreB = typeof row.scoreB === "string" ? row.scoreB : "";
+    const selectedOption =
+      row.selectedOption === "firstHalfWinner" ||
+      row.selectedOption === "firstHalfFirstGoal" ||
+      row.selectedOption === "fullTimeWinner" ||
+      row.selectedOption === "fullTimeFirstGoal"
+        ? row.selectedOption
+        : null;
+
     const idNum = Number(matchId);
     if (!Number.isFinite(idNum)) continue;
 
-    out[idNum] = { winner, scoreA, scoreB };
+    const next: Prediction = {
+      selectedOption,
+      firstHalfWinner,
+      firstHalfFirstGoal,
+      fullTimeWinner,
+      fullTimeFirstGoal,
+    };
+    next.selectedOption = next.selectedOption ?? inferSelectedOption(next);
+
+    if (hasPrediction(next)) {
+      out[idNum] = next;
+    }
   }
 
   return out;
@@ -50,16 +128,24 @@ async function persistPrediction(match: Match, pred: Prediction) {
     {
       uid: user.uid,
       email: user.email ?? null,
-      points: 0,
       picks: {
         [String(match.id)]: {
           matchId: match.id,
           round: match.round,
           teamA: match.teamA.name,
           teamB: match.teamB.name,
-          winner: pred.winner,
-          scoreA: pred.scoreA,
-          scoreB: pred.scoreB,
+          winner: pred.fullTimeWinner,
+          scoreA: "",
+          scoreB: "",
+          firstHalfWinner: pred.firstHalfWinner,
+          firstHalfFirstGoal: pred.firstHalfFirstGoal,
+          firstHalfScoreA: "",
+          firstHalfScoreB: "",
+          fullTimeWinner: pred.fullTimeWinner,
+          fullTimeFirstGoal: pred.fullTimeFirstGoal,
+          fullTimeScoreA: "",
+          fullTimeScoreB: "",
+          selectedOption: pred.selectedOption,
           savedAt: serverTimestamp(),
         },
       },
@@ -173,24 +259,18 @@ function PredictDialog({
   }, [onClose]);
 
   function submit() {
-    if (pred.winner || (pred.scoreA !== "" && pred.scoreB !== "")) onSave(pred);
+    if (hasPrediction(pred)) onSave(pred);
   }
 
-  function updateScore(key: "scoreA" | "scoreB", next: string) {
-    const digitsOnly = next.replace(/\D/g, "");
-    if (digitsOnly === "") {
-      setPred((p) => ({ ...p, [key]: "" }));
-      return;
-    }
-
-    const capped = Math.min(20, Number(digitsOnly));
-    setPred((p) => ({ ...p, [key]: String(capped) }));
-  }
-
-  function nudgeScore(key: "scoreA" | "scoreB", delta: number) {
-    const current = pred[key] === "" ? 0 : Number(pred[key]);
-    const next = Math.max(0, Math.min(20, current + delta));
-    setPred((p) => ({ ...p, [key]: String(next) }));
+  function setSingleOptionPrediction(
+    option: Prediction["selectedOption"],
+    patch: Partial<Prediction>,
+  ) {
+    setPred({
+      ...EMPTY_PREDICTION,
+      selectedOption: option,
+      ...patch,
+    });
   }
 
   return (
@@ -253,6 +333,11 @@ function PredictDialog({
         </div>
 
         <div className="px-6 pb-7 flex flex-col gap-5">
+          <p className="text-xs text-gray-500">
+            You can choose only one option for this match. Choosing another one
+            replaces the previous selection.
+          </p>
+
           <div>
             <div className="flex items-center gap-2 mb-3">
               <span
@@ -260,13 +345,7 @@ function PredictDialog({
                 style={{ background: "#ee7e01" }}
               />
               <span className="text-sm font-bold text-gray-800">
-                Winner Prediction
-              </span>
-              <span
-                className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full"
-                style={{ background: "#fff2e2", color: "#ee7e01" }}
-              >
-                +3 pts
+                First Half Winner
               </span>
             </div>
             <div className="grid grid-cols-3 gap-2">
@@ -278,18 +357,26 @@ function PredictDialog({
                 <button
                   key={val}
                   onClick={() =>
-                    setPred((p) => ({
-                      ...p,
-                      winner: p.winner === val ? null : val,
-                    }))
+                    setSingleOptionPrediction("firstHalfWinner", {
+                      firstHalfWinner: val,
+                    })
                   }
                   className="py-2.5 px-2 text-xs font-semibold transition-all"
                   style={{
-                    background: pred.winner === val ? "#ee7e01" : "#f9fafb",
-                    border: `1px solid ${pred.winner === val ? "#ee7e01" : "#e5e7eb"}`,
-                    color: pred.winner === val ? "white" : "#374151",
+                    background:
+                      pred.selectedOption === "firstHalfWinner" &&
+                      pred.firstHalfWinner === val
+                        ? "#ee7e01"
+                        : "#f9fafb",
+                    border: `1px solid ${pred.selectedOption === "firstHalfWinner" && pred.firstHalfWinner === val ? "#ee7e01" : "#e5e7eb"}`,
+                    color:
+                      pred.selectedOption === "firstHalfWinner" &&
+                      pred.firstHalfWinner === val
+                        ? "white"
+                        : "#374151",
                     boxShadow:
-                      pred.winner === val
+                      pred.selectedOption === "firstHalfWinner" &&
+                      pred.firstHalfWinner === val
                         ? "0 0 14px rgba(238,126,1,0.25)"
                         : "none",
                   }}
@@ -307,79 +394,142 @@ function PredictDialog({
                 style={{ background: "#ee7e01" }}
               />
               <span className="text-sm font-bold text-gray-800">
-                Exact Score
-              </span>
-              <span
-                className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full"
-                style={{ background: "#fff2e2", color: "#ee7e01" }}
-              >
-                +10 pts
+                First Half First Goal
               </span>
             </div>
-            <div className="flex items-center gap-3">
-              {(["scoreA", "scoreB"] as const).map((key, i) => (
-                <div key={key} className="contents">
-                  {i === 1 && (
-                    <span
-                      key="sep"
-                      className="text-gray-400 font-bold text-2xl flex-shrink-0"
-                    >
-                      —
-                    </span>
-                  )}
-                  <div className="flex items-center gap-2 w-full">
-                    {i === 1 && (
-                      <div className="flex flex-col gap-1">
-                        <button
-                          type="button"
-                          aria-label={`Increase ${key === "scoreA" ? match.teamA.name : match.teamB.name} score`}
-                          onClick={() => nudgeScore(key, 1)}
-                          className="h-[22px] w-10 rounded-lg border border-gray-200 bg-gray-50 text-gray-700 text-sm font-black leading-none transition-all hover:bg-gray-100 active:scale-95"
-                        >
-                          +
-                        </button>
-                        <button
-                          type="button"
-                          aria-label={`Decrease ${key === "scoreA" ? match.teamA.name : match.teamB.name} score`}
-                          onClick={() => nudgeScore(key, -1)}
-                          className="h-[22px] w-10 rounded-lg border border-gray-200 bg-gray-50 text-gray-700 text-sm font-black leading-none transition-all hover:bg-gray-100 active:scale-95"
-                        >
-                          −
-                        </button>
-                      </div>
-                    )}
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      placeholder="0"
-                      value={pred[key]}
-                      onChange={(e) => updateScore(key, e.target.value)}
-                      className="w-full h-12 rounded-xl text-center font-black text-2xl outline-none transition-all text-gray-900 border border-gray-300 focus:border-[#ee7e01] focus:ring-2 focus:ring-[#ee7e01]/25"
-                      style={{ background: "#ffffff" }}
-                    />
-                    {i !== 1 && (
-                      <div className="flex flex-col gap-1">
-                        <button
-                          type="button"
-                          aria-label={`Increase ${key === "scoreA" ? match.teamA.name : match.teamB.name} score`}
-                          onClick={() => nudgeScore(key, 1)}
-                          className="h-[22px] w-10 rounded-lg border border-gray-200 bg-gray-50 text-gray-700 text-sm font-black leading-none transition-all hover:bg-gray-100 active:scale-95"
-                        >
-                          +
-                        </button>
-                        <button
-                          type="button"
-                          aria-label={`Decrease ${key === "scoreA" ? match.teamA.name : match.teamB.name} score`}
-                          onClick={() => nudgeScore(key, -1)}
-                          className="h-[22px] w-10 rounded-lg border border-gray-200 bg-gray-50 text-gray-700 text-sm font-black leading-none transition-all hover:bg-gray-100 active:scale-95"
-                        >
-                          −
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { val: "A", label: match.teamA.name } as const,
+                { val: "none", label: "No goal" } as const,
+                { val: "B", label: match.teamB.name } as const,
+              ].map(({ val, label }) => (
+                <button
+                  key={val}
+                  onClick={() =>
+                    setSingleOptionPrediction("firstHalfFirstGoal", {
+                      firstHalfFirstGoal: val,
+                    })
+                  }
+                  className="py-2.5 px-2 text-xs font-semibold transition-all"
+                  style={{
+                    background:
+                      pred.selectedOption === "firstHalfFirstGoal" &&
+                      pred.firstHalfFirstGoal === val
+                        ? "#ee7e01"
+                        : "#f9fafb",
+                    border: `1px solid ${pred.selectedOption === "firstHalfFirstGoal" && pred.firstHalfFirstGoal === val ? "#ee7e01" : "#e5e7eb"}`,
+                    color:
+                      pred.selectedOption === "firstHalfFirstGoal" &&
+                      pred.firstHalfFirstGoal === val
+                        ? "white"
+                        : "#374151",
+                    boxShadow:
+                      pred.selectedOption === "firstHalfFirstGoal" &&
+                      pred.firstHalfFirstGoal === val
+                        ? "0 0 14px rgba(238,126,1,0.25)"
+                        : "none",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <span
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ background: "#ee7e01" }}
+              />
+              <span className="text-sm font-bold text-gray-800">
+                Full Time Winner
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { val: "A", label: match.teamA.name } as const,
+                { val: "draw", label: "Draw" } as const,
+                { val: "B", label: match.teamB.name } as const,
+              ].map(({ val, label }) => (
+                <button
+                  key={`ft-${val}`}
+                  onClick={() =>
+                    setSingleOptionPrediction("fullTimeWinner", {
+                      fullTimeWinner: val,
+                    })
+                  }
+                  className="py-2.5 px-2 text-xs font-semibold transition-all"
+                  style={{
+                    background:
+                      pred.selectedOption === "fullTimeWinner" &&
+                      pred.fullTimeWinner === val
+                        ? "#ee7e01"
+                        : "#f9fafb",
+                    border: `1px solid ${pred.selectedOption === "fullTimeWinner" && pred.fullTimeWinner === val ? "#ee7e01" : "#e5e7eb"}`,
+                    color:
+                      pred.selectedOption === "fullTimeWinner" &&
+                      pred.fullTimeWinner === val
+                        ? "white"
+                        : "#374151",
+                    boxShadow:
+                      pred.selectedOption === "fullTimeWinner" &&
+                      pred.fullTimeWinner === val
+                        ? "0 0 14px rgba(238,126,1,0.25)"
+                        : "none",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <span
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ background: "#ee7e01" }}
+              />
+              <span className="text-sm font-bold text-gray-800">
+                Full Time First Goal
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { val: "A", label: match.teamA.name } as const,
+                { val: "none", label: "No goal" } as const,
+                { val: "B", label: match.teamB.name } as const,
+              ].map(({ val, label }) => (
+                <button
+                  key={`ftg-${val}`}
+                  onClick={() =>
+                    setSingleOptionPrediction("fullTimeFirstGoal", {
+                      fullTimeFirstGoal: val,
+                    })
+                  }
+                  className="py-2.5 px-2 text-xs font-semibold transition-all"
+                  style={{
+                    background:
+                      pred.selectedOption === "fullTimeFirstGoal" &&
+                      pred.fullTimeFirstGoal === val
+                        ? "#ee7e01"
+                        : "#f9fafb",
+                    border: `1px solid ${pred.selectedOption === "fullTimeFirstGoal" && pred.fullTimeFirstGoal === val ? "#ee7e01" : "#e5e7eb"}`,
+                    color:
+                      pred.selectedOption === "fullTimeFirstGoal" &&
+                      pred.fullTimeFirstGoal === val
+                        ? "white"
+                        : "#374151",
+                    boxShadow:
+                      pred.selectedOption === "fullTimeFirstGoal" &&
+                      pred.fullTimeFirstGoal === val
+                        ? "0 0 14px rgba(238,126,1,0.25)"
+                        : "none",
+                  }}
+                >
+                  {label}
+                </button>
               ))}
             </div>
           </div>
@@ -416,7 +566,7 @@ function MatchRow({
 
   const handleSave = useCallback(
     (p: Prediction) => {
-      if (p.winner || (p.scoreA !== "" && p.scoreB !== "")) {
+      if (hasPrediction(p)) {
         setSaved(p);
         void persistPrediction(match, p).catch((err: unknown) => {
           console.error("Failed to save prediction to Firestore", err);
@@ -437,12 +587,30 @@ function MatchRow({
 
   function pickLabel(): string | null {
     if (!saved) return null;
-    if (saved.scoreA !== "" && saved.scoreB !== "")
-      return `${saved.scoreA} – ${saved.scoreB}`;
-    if (saved.winner === "A") return match.teamA.name;
-    if (saved.winner === "B") return match.teamB.name;
-    if (saved.winner === "draw") return "Draw";
-    return null;
+    switch (saved.selectedOption) {
+      case "firstHalfWinner":
+        if (saved.firstHalfWinner === "A") return `FH Winner: ${match.teamA.name}`;
+        if (saved.firstHalfWinner === "B") return `FH Winner: ${match.teamB.name}`;
+        if (saved.firstHalfWinner === "draw") return "FH Winner: Draw";
+        return null;
+      case "firstHalfFirstGoal":
+        if (saved.firstHalfFirstGoal === "A") return `FH First Goal: ${match.teamA.name}`;
+        if (saved.firstHalfFirstGoal === "B") return `FH First Goal: ${match.teamB.name}`;
+        if (saved.firstHalfFirstGoal === "none") return "FH First Goal: No goal";
+        return null;
+      case "fullTimeWinner":
+        if (saved.fullTimeWinner === "A") return `FT Winner: ${match.teamA.name}`;
+        if (saved.fullTimeWinner === "B") return `FT Winner: ${match.teamB.name}`;
+        if (saved.fullTimeWinner === "draw") return "FT Winner: Draw";
+        return null;
+      case "fullTimeFirstGoal":
+        if (saved.fullTimeFirstGoal === "A") return `FT First Goal: ${match.teamA.name}`;
+        if (saved.fullTimeFirstGoal === "B") return `FT First Goal: ${match.teamB.name}`;
+        if (saved.fullTimeFirstGoal === "none") return "FT First Goal: No goal";
+        return null;
+      default:
+        return null;
+    }
   }
 
   const pick = pickLabel();
@@ -541,7 +709,7 @@ function MatchRow({
       {dialogOpen && (
         <PredictDialog
           match={match}
-          initial={saved ?? { winner: null, scoreA: "", scoreB: "" }}
+          initial={saved ?? EMPTY_PREDICTION}
           onClose={() => setDialogOpen(false)}
           onSave={handleSave}
         />
@@ -593,11 +761,11 @@ export default function MatchDashboard() {
           <div className="flex gap-5 text-sm text-gray-500">
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-[#ee7e01] inline-block" />
-              Winner = +3 pts
+              First-half / Full-time Winner
             </span>
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-[#ee7e01] inline-block" />
-              Exact Score = +10 pts
+              First-half / Full-time First Goal
             </span>
           </div>
         </div>

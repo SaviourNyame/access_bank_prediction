@@ -68,8 +68,15 @@ const T: Record<string, Team> = {
 
 // Helper: "DD.MM." + "HH:MM" → UTC timestamp (year 2026)
 function toMs(date: string, time: string): number {
-  const [day, month] = date.replace(".", "").split(".").map(Number);
+  const match = date.match(/^(\d{2})\.(\d{2})\.$/);
+  if (!match) {
+    throw new Error(`Invalid match date format: ${date}`);
+  }
+
+  const day = Number(match[1]);
+  const month = Number(match[2]);
   const [hour, minute] = time.split(":").map(Number);
+
   return Date.UTC(2026, month - 1, day, hour, minute, 0);
 }
 

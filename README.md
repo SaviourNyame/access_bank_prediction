@@ -16,6 +16,23 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## API-Football Connection
+
+This project includes a server-side API-Football client and a health route:
+
+- `GET /api/football/health`
+
+Environment variables:
+
+- `API_FOOTBALL_BASE_URL` (default: `https://v3.football.api-sports.io`)
+- `API_FOOTBALL_KEY`
+
+After starting the app, test with:
+
+```bash
+curl http://localhost:3000/api/football/health
+```
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

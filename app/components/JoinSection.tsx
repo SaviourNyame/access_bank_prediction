@@ -1,59 +1,55 @@
 "use client";
 
 import { useState } from "react";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  updateProfile,
-} from "firebase/auth";
+import Image from "next/image";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 
-function mapAuthError(err: unknown): string {
-  const code =
-    typeof err === "object" && err !== null && "code" in err
-      ? String((err as { code?: string }).code)
-      : "";
+export type SignupLocation = {
+  id: string;
+  name: string;
+};
 
-  switch (code) {
-    case "auth/operation-not-allowed":
-      return "Email/Password auth is not enabled in Firebase. In Firebase Console, go to Authentication > Sign-in method and enable Email/Password.";
-    case "auth/invalid-email":
-      return "Please enter a valid email address.";
-    case "auth/missing-password":
-      return "Please enter your password.";
-    case "auth/weak-password":
-      return "Password is too weak. Use at least 6 characters.";
-    case "auth/email-already-in-use":
-      return "That email is already registered. Try logging in instead.";
-    case "auth/user-not-found":
-    case "auth/invalid-credential":
-      return "Invalid email or password.";
-    case "auth/wrong-password":
-      return "Invalid email or password.";
-    case "auth/too-many-requests":
-      return "Too many attempts. Please wait and try again shortly.";
-    default: {
-      if (err instanceof Error) {
-        return err.message.replace("Firebase: ", "");
-      }
-      return "Authentication failed. Try again.";
-    }
-  }
+export const SIGNUP_LOCATIONS: SignupLocation[] = [
+  { id: "honeysuckle-airpot", name: "HoneySuckle Airpot" },
+  { id: "honeysuckle-osu", name: "HoneySuckle Osu" },
+  { id: "honeysuckle-labone", name: "HoneySuckle Labone" },
+  { id: "honeysuckle-east-legon", name: "HoneySuckle East Legon" },
+  { id: "honeysuckle-spintex", name: "HoneySuckle Spintex" },
+  { id: "pit-stop-labone", name: "Pit Stop Labone" },
+  { id: "goldcoast-restaurant", name: "GoldCoast Restaurant" },
+];
+
+function findSignupLocation(locationId?: string): SignupLocation | null {
+  if (!locationId) return null;
+  const normalized = locationId.trim().toLowerCase();
+  return (
+    SIGNUP_LOCATIONS.find((location) => location.id === normalized) ?? null
+  );
 }
 
-export default function JoinSection() {
-  const [mode, setMode] = useState<"signup" | "login">("signup");
+function mapAuthError(err: unknown): string {
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return "An error occurred. Please try again.";
+}
+
+export default function JoinSection({
+  locationId,
+}: {
+  locationId?: string;
+} = {}) {
   const [form, setForm] = useState({
-    name: "",
+    username: "",
     email: "",
-    password: "",
     phone: "",
   });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const selectedLocation = findSignupLocation(locationId);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -63,42 +59,23 @@ export default function JoinSection() {
     setLoading(true);
 
     try {
-      if (mode === "signup") {
-        const cred = await createUserWithEmailAndPassword(
-          auth,
-          form.email.trim(),
-          form.password,
-        );
+      const userId = `${form.username}-${Date.now()}`;
+      await setDoc(doc(db, "users", userId), {
+        uid: userId,
+        username: form.username.trim(),
+        name: form.username.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        locationId: selectedLocation?.id ?? null,
+        locationName: selectedLocation?.name ?? null,
+        picks: {},
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
 
-        await setDoc(doc(db, "users", cred.user.uid), {
-          uid: cred.user.uid,
-          name: form.name.trim() || null,
-          email: form.email.trim(),
-          phone: form.phone.trim() || null,
-          points: 0,
-          picks: {},
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-
-        if (form.name.trim()) {
-          await updateProfile(cred.user, { displayName: form.name.trim() });
-        }
-
-        setSuccessMessage(
-          "Account created successfully. You are now signed in.",
-        );
-      } else {
-        await signInWithEmailAndPassword(
-          auth,
-          form.email.trim(),
-          form.password,
-        );
-        setSuccessMessage("Welcome back. You are now logged in.");
-      }
-
+      setSuccessMessage("Account created successfully!");
       setSubmitted(true);
-      setForm((prev) => ({ ...prev, password: "" }));
+      setForm({ username: "", email: "", phone: "" });
     } catch (err: unknown) {
       setError(mapAuthError(err));
     } finally {
@@ -133,12 +110,32 @@ export default function JoinSection() {
           >
             Free Entry
           </span>
-          <h2 className="text-4xl sm:text-5xl font-black text-gray-900 mb-3">
-            Join the Competition
-          </h2>
+          <div className="mb-6 flex justify-center">
+            <Image
+              src="/pnr.png"
+              alt="Predict Win Repeat"
+              width={1200}
+              height={360}
+              className="w-[40vw] sm:w-[36vw] lg:w-full max-w-[280px] h-auto drop-shadow-xl"
+              sizes="(max-width: 640px) 40vw, (max-width: 1024px) 36vw, 280px"
+            />
+          </div>
           <p className="text-gray-500">
             Sign up or log in using your email and password.
           </p>
+          {selectedLocation && (
+            <div
+              className="mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold"
+              style={{
+                background: "rgba(238,126,1,0.08)",
+                border: "1px solid rgba(238,126,1,0.22)",
+                color: "#7c2d12",
+              }}
+            >
+              <span>Signup location:</span>
+              <span style={{ color: "#ee7e01" }}>{selectedLocation.name}</span>
+            </div>
+          )}
         </div>
 
         {/* Card */}
@@ -155,39 +152,6 @@ export default function JoinSection() {
             style={{ background: "#ee7e01" }}
           />
 
-          <div className="mb-5 grid grid-cols-2 gap-2 rounded-xl p-1 bg-gray-100">
-            <button
-              type="button"
-              onClick={() => {
-                setMode("signup");
-                setError("");
-                setSuccessMessage("");
-              }}
-              className={`py-2.5 text-sm font-bold rounded-lg transition-colors ${
-                mode === "signup"
-                  ? "bg-white text-[#ee7e01]"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              Sign Up
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMode("login");
-                setError("");
-                setSuccessMessage("");
-              }}
-              className={`py-2.5 text-sm font-bold rounded-lg transition-colors ${
-                mode === "login"
-                  ? "bg-white text-[#ee7e01]"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              Login
-            </button>
-          </div>
-
           {submitted ? (
             <div className="text-center py-8 flex flex-col items-center gap-4">
               <div
@@ -200,14 +164,14 @@ export default function JoinSection() {
                 ✓
               </div>
               <h3 className="text-2xl font-black text-gray-900">
-                {mode === "signup" ? "You&apos;re in!" : "Welcome back!"}
+                You&apos;re in!
               </h3>
               <p className="text-gray-500 max-w-xs">
                 {successMessage ||
                   "Welcome to the Access Bank World Cup Prediction League."}
               </p>
               <button
-                className="btn-orange px-6 py-3 font-semibold mt-2"
+                className="btn-orange rounded-lg px-6 py-3 font-semibold mt-2"
                 onClick={() => setSubmitted(false)}
               >
                 Back to Form
@@ -215,21 +179,36 @@ export default function JoinSection() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-              {mode === "signup" && (
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Full Name / Username
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. KofiPredictor99"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl text-gray-900 placeholder-gray-400 outline-none transition-all border border-gray-200 focus:border-[#ee7e01] bg-gray-50 focus:bg-white"
-                  />
+              {selectedLocation && (
+                <div
+                  className="rounded-xl px-4 py-3 text-sm font-semibold"
+                  style={{
+                    background: "rgba(238,126,1,0.06)",
+                    border: "1px solid rgba(238,126,1,0.15)",
+                    color: "#7c2d12",
+                  }}
+                >
+                  You are signing up from{" "}
+                  <span style={{ color: "#ee7e01" }}>
+                    {selectedLocation.name}
+                  </span>
+                  .
                 </div>
               )}
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. KofiPredictor99"
+                  value={form.username}
+                  onChange={(e) => setForm({ ...form, username: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl text-gray-900 placeholder-gray-400 outline-none transition-all border border-gray-200 focus:border-[#ee7e01] bg-gray-50 focus:bg-white"
+                />
+              </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -247,43 +226,17 @@ export default function JoinSection() {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Password
+                  Phone Number
                 </label>
                 <input
-                  type="password"
+                  type="tel"
                   required
-                  minLength={6}
-                  placeholder="Enter your password"
-                  value={form.password}
-                  onChange={(e) =>
-                    setForm({ ...form, password: e.target.value })
-                  }
+                  placeholder="+233 XX XXX XXXX"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl text-gray-900 placeholder-gray-400 outline-none transition-all border border-gray-200 focus:border-[#ee7e01] bg-gray-50 focus:bg-white"
                 />
-                <p className="text-xs text-gray-400 mt-1">
-                  Use at least 6 characters.
-                </p>
               </div>
-
-              {mode === "signup" && (
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Phone Number{" "}
-                    <span className="text-gray-400 font-normal">
-                      (optional)
-                    </span>
-                  </label>
-                  <input
-                    type="tel"
-                    placeholder="+233 XX XXX XXXX"
-                    value={form.phone}
-                    onChange={(e) =>
-                      setForm({ ...form, phone: e.target.value })
-                    }
-                    className="w-full px-4 py-3 rounded-xl text-gray-900 placeholder-gray-400 outline-none transition-all border border-gray-200 focus:border-[#ee7e01] bg-gray-50 focus:bg-white"
-                  />
-                </div>
-              )}
 
               {error && (
                 <div
@@ -317,13 +270,9 @@ export default function JoinSection() {
               <button
                 type="submit"
                 disabled={loading}
-                className="btn-orange w-full py-4 font-bold text-base mt-1 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="btn-orange rounded-lg w-full py-4 font-bold text-base mt-1 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {loading
-                  ? "Please wait..."
-                  : mode === "signup"
-                    ? "Create Account ->"
-                    : "Login ->"}
+                {loading ? "Please wait..." : "Join Now ->"}
               </button>
 
               <p className="text-center text-xs text-gray-400">

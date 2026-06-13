@@ -2,17 +2,28 @@ import Navbar from "./components/Navbar";
 import HeroSection from "./components/HeroSection";
 import JoinSection from "./components/JoinSection";
 import Footer from "./components/Footer";
-import { MatchDashboard, Leaderboard, TodayMatchesPopup } from "./components/ClientComponents";
+import {
+  MatchDashboard,
+  TodayMatchesPopup,
+} from "./components/ClientComponents";
 
-export default function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ location?: string | string[] }>;
+}) {
+  const resolvedSearchParams = await searchParams;
+  const locationId = Array.isArray(resolvedSearchParams.location)
+    ? resolvedSearchParams.location[0]
+    : resolvedSearchParams.location;
+
   return (
     <>
       <Navbar />
       <main className="flex-1">
-        <HeroSection />
+        <HeroSection location={locationId} />
         <MatchDashboard />
-        <Leaderboard />
-        <JoinSection />
+        <JoinSection locationId={locationId} />
       </main>
       <Footer />
       <TodayMatchesPopup />
