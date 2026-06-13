@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SIGNUP_LOCATIONS } from "@/app/components/JoinSection";
+import { SIGNUP_LOCATIONS } from "@/lib/locations";
 
 export const metadata: Metadata = {
   title: "Location Signup Links · Access Bank World Cup Predictions",

@@ -442,14 +442,15 @@ export default function AdminDashboard() {
     }
 
     let cancelled = false;
+    const currentUser = user;
 
     async function checkAdminAccess() {
       setCheckingAccess(true);
       setAccessError("");
 
       try {
-        const uidSnap = await getDoc(doc(db, "admins", user.uid));
-        const emailKey = user.email?.trim().toLowerCase() ?? "";
+        const uidSnap = await getDoc(doc(db, "admins", currentUser.uid));
+        const emailKey = currentUser.email?.trim().toLowerCase() ?? "";
 
         let emailAllowed = false;
         if (emailKey) {

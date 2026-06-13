@@ -4,29 +4,9 @@ import { useState } from "react";
 import Image from "next/image";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-
-export type SignupLocation = {
-  id: string;
-  name: string;
-};
-
-export const SIGNUP_LOCATIONS: SignupLocation[] = [
-  { id: "honeysuckle-airpot", name: "HoneySuckle Airpot" },
-  { id: "honeysuckle-osu", name: "HoneySuckle Osu" },
-  { id: "honeysuckle-labone", name: "HoneySuckle Labone" },
-  { id: "honeysuckle-east-legon", name: "HoneySuckle East Legon" },
-  { id: "honeysuckle-spintex", name: "HoneySuckle Spintex" },
-  { id: "pit-stop-labone", name: "Pit Stop Labone" },
-  { id: "goldcoast-restaurant", name: "GoldCoast Restaurant" },
-];
-
-function findSignupLocation(locationId?: string): SignupLocation | null {
-  if (!locationId) return null;
-  const normalized = locationId.trim().toLowerCase();
-  return (
-    SIGNUP_LOCATIONS.find((location) => location.id === normalized) ?? null
-  );
-}
+import { findSignupLocation, SIGNUP_LOCATIONS } from "@/lib/locations";
+export type { SignupLocation } from "@/lib/locations";
+export { SIGNUP_LOCATIONS };
 
 function mapAuthError(err: unknown): string {
   if (err instanceof Error) {
