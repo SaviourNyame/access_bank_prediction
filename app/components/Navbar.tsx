@@ -279,7 +279,22 @@ export default function Navbar() {
     Record<number, MatchStatus>
   >({});
   const [isAdmin, setIsAdmin] = useState(false);
-  const profileWrapRef = useRef<HTMLDivElement | null>(null);
+  const profileWrapRef  = useRef<HTMLDivElement | null>(null);
+  const holdTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function startHold() {
+    holdTimerRef.current = setTimeout(() => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }, 2000);
+  }
+
+  function cancelHold() {
+    if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+  }
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -395,17 +410,24 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 glass-nav">
+      <nav
+        className="fixed top-0 left-0 right-0 z-50 glass-nav"
+        onMouseDown={startHold}
+        onMouseUp={cancelHold}
+        onMouseLeave={cancelHold}
+        onTouchStart={startHold}
+        onTouchEnd={cancelHold}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-3">
               <Image
-                src="/logo.png"
+                src="/acesslogo.png"
                 alt="Access Bank"
-                width={120}
-                height={40}
-                className="object-contain"
+                width={160}
+                height={48}
+                className="object-contain h-10 w-auto"
                 priority
               />
               <div
