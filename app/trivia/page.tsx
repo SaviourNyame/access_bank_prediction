@@ -68,20 +68,21 @@ export default function TriviaPage() {
             width={1920}
             height={400}
             priority
-            className="w-full h-auto object-bottom"
+            className="w-full object-bottom"
+            style={{ maxHeight: "120px", height: "auto" }}
             sizes="100vw"
           />
         </div>
 
         {/* ── coupon.png + text pinned to bottom (mobile only) ── */}
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 pointer-events-none flex flex-col items-center pb-14" style={{ zIndex: 3 }}>
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 pointer-events-none flex flex-col items-center pb-4" style={{ zIndex: 3 }}>
           <Image
             src="/coupon.png"
             alt=""
             width={400}
             height={140}
             priority
-            className="w-[24%] h-auto"
+            className="w-[18%] h-auto"
             sizes="38vw"
           />
           <p className="text-white font-black text-lg tracking-widest uppercase mt-2 leading-tight text-center">

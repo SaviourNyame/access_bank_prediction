@@ -3,6 +3,7 @@ export type SeedQuestion = {
   options: { A: string; B: string; C: string; D: string };
   correct: "A" | "B" | "C" | "D";
   timer: number;
+  difficulty?: "easy" | "medium" | "hard";
 };
 
 export const TRIVIA_SEEDS: SeedQuestion[] = [
@@ -292,5 +293,91 @@ export const TRIVIA_SEEDS: SeedQuestion[] = [
     options: { A: "2006 Germany", B: "2010 South Africa", C: "2014 Brazil", D: "2022 Qatar" },
     correct: "B",
     timer: 15,
+  },
+
+  // ── Hard Questions ───────────────────────────────────────────────────────────
+  {
+    question: "Who is the only player to score a hat-trick in a FIFA World Cup final?",
+    options: { A: "Pelé", B: "Geoff Hurst", C: "Gerd Müller", D: "Ronaldo" },
+    correct: "B",
+    timer: 25,
+    difficulty: "hard",
+  },
+  {
+    question: "What was the half-time score when Germany beat Brazil 7-1 in the 2014 World Cup semi-final?",
+    options: { A: "3-0", B: "4-0", C: "5-0", D: "6-0" },
+    correct: "C",
+    timer: 25,
+    difficulty: "hard",
+  },
+  {
+    question: "Which player scored Brazil's only goal in the 7-1 loss to Germany at the 2014 World Cup?",
+    options: { A: "Neymar", B: "Hulk", C: "David Luiz", D: "Oscar" },
+    correct: "D",
+    timer: 25,
+    difficulty: "hard",
+  },
+  {
+    question: "What unique record did Jairzinho set at the 1970 FIFA World Cup?",
+    options: { A: "Scored the most goals", B: "Scored in every single match", C: "Provided the most assists", D: "Played every minute of every game" },
+    correct: "B",
+    timer: 25,
+    difficulty: "hard",
+  },
+  {
+    question: "In the 2006 World Cup final, Zinedine Zidane headbutted which Italian player?",
+    options: { A: "Fabio Cannavaro", B: "Andrea Pirlo", C: "Marco Materazzi", D: "Gennaro Gattuso" },
+    correct: "C",
+    timer: 20,
+    difficulty: "hard",
+  },
+  {
+    question: "Who won the FIFA World Cup Golden Ball at the 2006 World Cup despite being sent off in the final?",
+    options: { A: "Ronaldinho", B: "Andrés Iniesta", C: "Thierry Henry", D: "Zinedine Zidane" },
+    correct: "D",
+    timer: 25,
+    difficulty: "hard",
+  },
+  {
+    question: "Which team beat heavily-favoured Hungary 3-2 in the 1954 World Cup final — known as the 'Miracle of Bern'?",
+    options: { A: "Brazil", B: "West Germany", C: "Uruguay", D: "France" },
+    correct: "B",
+    timer: 25,
+    difficulty: "hard",
+  },
+  {
+    question: "How many goals did Ronaldo (Brazil) score at the 2002 FIFA World Cup, setting a tournament record at the time?",
+    options: { A: "6", B: "7", C: "8", D: "9" },
+    correct: "C",
+    timer: 25,
+    difficulty: "hard",
+  },
+  {
+    question: "Which team scored 10 goals in a single World Cup match in 1982 — the highest winning margin in World Cup history?",
+    options: { A: "Brazil vs Bolivia", B: "Hungary vs El Salvador", C: "West Germany vs Mexico", D: "Yugoslavia vs Zaire" },
+    correct: "B",
+    timer: 25,
+    difficulty: "hard",
+  },
+  {
+    question: "Who scored the winning penalty for Italy in the 2006 World Cup final shootout against France?",
+    options: { A: "Alessandro Del Piero", B: "Andrea Pirlo", C: "Fabio Grosso", D: "Francesco Totti" },
+    correct: "C",
+    timer: 25,
+    difficulty: "hard",
+  },
+  {
+    question: "Diego Maradona scored both the 'Hand of God' and 'Goal of the Century' in the same match against which team at the 1986 World Cup?",
+    options: { A: "Belgium", B: "West Germany", C: "England", D: "France" },
+    correct: "C",
+    timer: 20,
+    difficulty: "hard",
+  },
+  {
+    question: "Which goalkeeper won the Golden Glove (best goalkeeper) award at the 2022 FIFA World Cup?",
+    options: { A: "Hugo Lloris", B: "Dominik Livaković", C: "Yassine Bounou", D: "Emiliano Martínez" },
+    correct: "D",
+    timer: 20,
+    difficulty: "hard",
   },
 ];
