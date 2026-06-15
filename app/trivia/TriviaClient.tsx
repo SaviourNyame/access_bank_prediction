@@ -334,7 +334,7 @@ export default function TriviaClient() {
             </div>
           </div>
           <span className="absolute right-0 bottom-0 text-white font-black text-sm tabular-nums">
-            {current + 1}/{questions.length}
+            {score}/10
           </span>
         </div>
 
