@@ -23,6 +23,7 @@ import { auth, db } from "@/lib/firebase";
 import AuthDialog from "@/app/components/AuthDialog";
 import { SIGNUP_LOCATIONS } from "@/app/components/JoinSection";
 import { MATCHES as STATIC_MATCHES } from "@/lib/matches";
+import { TRIVIA_SEEDS } from "@/lib/triviaSeeds";
 
 type MatchStatus = "upcoming" | "live" | "halftime" | "finished";
 
@@ -48,6 +49,7 @@ type Entry = {
   teamA: string;
   teamB: string;
   winner: PickWinner;
+  firstHalfWinner: PickWinner;
   scoreA: string;
   scoreB: string;
 };
@@ -112,6 +114,10 @@ function toEntries(raw: unknown): Entry[] {
       pick.winner === "A" || pick.winner === "B" || pick.winner === "draw"
         ? pick.winner
         : null;
+    const firstHalfWinner =
+      pick.firstHalfWinner === "A" || pick.firstHalfWinner === "B" || pick.firstHalfWinner === "draw"
+        ? pick.firstHalfWinner
+        : null;
 
     rows.push({
       matchId: Number.isFinite(parsedMatchId) ? parsedMatchId : null,
@@ -119,6 +125,7 @@ function toEntries(raw: unknown): Entry[] {
       teamA: typeof pick.teamA === "string" ? pick.teamA : "Team A",
       teamB: typeof pick.teamB === "string" ? pick.teamB : "Team B",
       winner,
+      firstHalfWinner,
       scoreA: typeof pick.scoreA === "string" ? pick.scoreA : "",
       scoreB: typeof pick.scoreB === "string" ? pick.scoreB : "",
     });
@@ -198,12 +205,21 @@ export default function AdminDashboard() {
   );
   const [locationMessage, setLocationMessage] = useState<string>("");
   const [activeTab, setActiveTab] = useState<
-    "home" | "matches" | "entries" | "users" | "winners"
+    "home" | "matches" | "entries" | "users" | "winners" | "trivia"
   >("home");
 
   const [halfTimeRevealed, setHalfTimeRevealed] = useState(false);
   const [togglingHalfTime, setTogglingHalfTime] = useState(false);
 
+  type ApiFixtureData = {
+    teamA: string; teamB: string;
+    htScoreA: string; htScoreB: string;
+    scoreA: string; scoreB: string;
+    status: MatchStatus;
+  };
+  const [apiFixtures, setApiFixtures] = useState<ApiFixtureData[]>([]);
+
+  const [expandedWinner, setExpandedWinner] = useState<string | null>(null);
   const [claimTarget, setClaimTarget] = useState<{ uid: string; name: string } | null>(null);
   const [claimCode, setClaimCode] = useState("");
   const [claimSaving, setClaimSaving] = useState(false);
@@ -232,6 +248,40 @@ export default function AdminDashboard() {
   const [addingSaving, setAddingSaving] = useState(false);
   const [addingError, setAddingError] = useState("");
 
+  // Trivia state
+  type TriviaQ = {
+    id: string;
+    question: string;
+    options: { A: string; B: string; C: string; D: string };
+    correct: "A" | "B" | "C" | "D";
+    timer: number;
+    order: number;
+  };
+  const [triviaQuestions, setTriviaQuestions] = useState<TriviaQ[]>([]);
+  const [triviaLoading, setTriviaLoading] = useState(false);
+  const [tQuestion, setTQuestion] = useState("");
+  const [tA, setTA] = useState(""); const [tB, setTB] = useState("");
+  const [tC, setTC] = useState(""); const [tD, setTD] = useState("");
+  const [tCorrect, setTCorrect] = useState<"A"|"B"|"C"|"D">("A");
+  const [tTimer, setTTimer] = useState(15);
+  const [tSaving, setTSaving] = useState(false);
+  const [tError, setTError] = useState("");
+
+  // Poll football API for live + HT scores
+  useEffect(() => {
+    async function fetchFixtures() {
+      try {
+        const res = await fetch("/api/football/fixtures");
+        if (!res.ok) return;
+        const data = (await res.json()) as { fixtures?: ApiFixtureData[] };
+        setApiFixtures(data.fixtures ?? []);
+      } catch { /* silent */ }
+    }
+    void fetchFixtures();
+    const id = setInterval(() => void fetchFixtures(), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   useEffect(() => {
     function syncTabFromHash() {
       if (typeof window === "undefined") return;
@@ -241,7 +291,8 @@ export default function AdminDashboard() {
         hash === "matches" ||
         hash === "entries" ||
         hash === "users" ||
-        hash === "winners"
+        hash === "winners" ||
+        hash === "trivia"
       ) {
         setActiveTab(hash);
       } else {
@@ -352,9 +403,8 @@ export default function AdminDashboard() {
   }
 
   useEffect(() => {
-    if (activeTab === "matches" && isAdmin) {
-      void loadAdminMatches();
-    }
+    if (activeTab === "matches" && isAdmin) void loadAdminMatches();
+    if (activeTab === "trivia" && isAdmin) void loadTriviaQuestions();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, isAdmin]);
 
@@ -431,6 +481,75 @@ export default function AdminDashboard() {
   async function deleteCustomMatch(firestoreId: string) {
     await deleteDoc(doc(db, "adminMatches", firestoreId));
     setCustomMatches((prev) => prev.filter((m) => m.firestoreId !== firestoreId));
+  }
+
+  async function loadTriviaQuestions() {
+    setTriviaLoading(true);
+    try {
+      const { query: fsQuery, orderBy } = await import("firebase/firestore");
+      const snap = await getDocs(fsQuery(collection(db, "triviaQuestions"), orderBy("order", "asc")));
+      setTriviaQuestions(
+        snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<TriviaQ, "id">) })),
+      );
+    } finally {
+      setTriviaLoading(false);
+    }
+  }
+
+  async function addTriviaQuestion() {
+    if (!tQuestion.trim() || !tA.trim() || !tB.trim()) {
+      setTError("Question, Option A and Option B are required.");
+      return;
+    }
+    setTSaving(true); setTError("");
+    try {
+      const nextOrder = triviaQuestions.length + 1;
+      const docRef = await addDoc(collection(db, "triviaQuestions"), {
+        question: tQuestion.trim(),
+        options: { A: tA.trim(), B: tB.trim(), C: tC.trim(), D: tD.trim() },
+        correct: tCorrect,
+        timer: tTimer,
+        order: nextOrder,
+        createdAt: serverTimestamp(),
+      });
+      setTriviaQuestions((prev) => [...prev, {
+        id: docRef.id, question: tQuestion.trim(),
+        options: { A: tA.trim(), B: tB.trim(), C: tC.trim(), D: tD.trim() },
+        correct: tCorrect, timer: tTimer, order: nextOrder,
+      }]);
+      setTQuestion(""); setTA(""); setTB(""); setTC(""); setTD("");
+      setTCorrect("A"); setTTimer(15);
+    } catch (err) {
+      setTError(err instanceof Error ? err.message : "Failed to save question.");
+    } finally {
+      setTSaving(false);
+    }
+  }
+
+  async function deleteTriviaQuestion(id: string) {
+    await deleteDoc(doc(db, "triviaQuestions", id));
+    setTriviaQuestions((prev) => prev.filter((q) => q.id !== id));
+  }
+
+  const [seeding, setSeeding] = useState(false);
+  async function seedTriviaQuestions() {
+    setSeeding(true);
+    try {
+      const startOrder = triviaQuestions.length;
+      const added: TriviaQ[] = [];
+      for (let i = 0; i < TRIVIA_SEEDS.length; i++) {
+        const seed = TRIVIA_SEEDS[i];
+        const ref = await addDoc(collection(db, "triviaQuestions"), {
+          ...seed,
+          order: startOrder + i + 1,
+          createdAt: serverTimestamp(),
+        });
+        added.push({ id: ref.id, ...seed, order: startOrder + i + 1 });
+      }
+      setTriviaQuestions((prev) => [...prev, ...added]);
+    } finally {
+      setSeeding(false);
+    }
   }
 
   useEffect(() => {
@@ -547,14 +666,56 @@ export default function AdminDashboard() {
     return list;
   }, [rows, sortBy]);
 
+  // Fixture lookup: "TeamA|TeamB" → fixture data (both orientations stored)
+  const fixtureMap = useMemo(() => {
+    const map = new Map<string, ApiFixtureData>();
+    for (const f of apiFixtures) {
+      map.set(`${f.teamA}|${f.teamB}`, f);
+      // also store flipped so we can look up regardless of home/away order
+      map.set(`${f.teamB}|${f.teamA}`, {
+        ...f,
+        teamA: f.teamB, teamB: f.teamA,
+        htScoreA: f.htScoreB, htScoreB: f.htScoreA,
+        scoreA: f.scoreB, scoreB: f.scoreA,
+      });
+    }
+    return map;
+  }, [apiFixtures]);
+
+  function htActualWinner(entry: Entry): PickWinner {
+    const fix = fixtureMap.get(`${entry.teamA}|${entry.teamB}`);
+    if (!fix) return null;
+    if (fix.status === "upcoming") return null;
+    const a = parseInt(fix.htScoreA);
+    const b = parseInt(fix.htScoreB);
+    if (isNaN(a) || isNaN(b)) return null;
+    if (a > b) return "A";
+    if (b > a) return "B";
+    return "draw";
+  }
+
   const winners = useMemo(() => {
     return [...rows]
+      .map((u) => {
+        const htCorrect = u.entries.filter((e) => {
+          if (!e.firstHalfWinner) return false;
+          const fix = fixtureMap.get(`${e.teamA}|${e.teamB}`);
+          if (!fix || fix.status === "upcoming") return false;
+          const a = parseInt(fix.htScoreA);
+          const b = parseInt(fix.htScoreB);
+          if (isNaN(a) || isNaN(b)) return false;
+          const actual: PickWinner = a > b ? "A" : b > a ? "B" : "draw";
+          return e.firstHalfWinner === actual;
+        }).length;
+        return { ...u, htCorrect };
+      })
       .sort((a, b) => {
+        if (b.htCorrect !== a.htCorrect) return b.htCorrect - a.htCorrect;
         if (b.points !== a.points) return b.points - a.points;
         return b.entries.length - a.entries.length;
       })
       .slice(0, 20);
-  }, [rows]);
+  }, [rows, fixtureMap]);
 
   const allEntries = useMemo(() => {
     return sortedRows.flatMap((row) =>
@@ -1038,60 +1199,115 @@ export default function AdminDashboard() {
               <div className="px-5 py-8 text-sm text-gray-500">No winners data yet.</div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[680px] text-sm">
+                <table className="w-full min-w-[720px] text-sm">
                   <thead>
                     <tr className="text-left text-gray-500 border-b border-black">
                       <th className="py-3 px-5 font-semibold">Rank</th>
                       <th className="py-3 pr-4 font-semibold">User</th>
                       <th className="py-3 pr-4 font-semibold">Location</th>
+                      <th className="py-3 pr-4 font-semibold">HT Correct</th>
                       <th className="py-3 pr-4 font-semibold">Points</th>
                       <th className="py-3 pr-5 font-semibold text-right">Coupon</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {winners.map((winner, index) => (
-                      <tr key={winner.uid} className="border-b border-gray-200">
-                        <td className="py-3 px-5 text-gray-700 font-mono">#{index + 1}</td>
-                        <td className="py-3 pr-4">
-                          <div className="font-semibold text-black">{winner.name}</div>
-                          <div className="text-xs text-gray-500">{winner.email}</div>
-                        </td>
-                        <td className="py-3 pr-4 text-gray-700">{locationLabel(winner)}</td>
-                        <td className="py-3 pr-4 font-black text-black">{winner.points}</td>
-                        <td className="py-3 pr-5 text-right">
-                          {winner.couponCode ? (
-                            <span className="inline-flex items-center gap-1.5">
-                              <span className="font-mono font-bold text-black tracking-widest">{winner.couponCode}</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setClaimTarget({ uid: winner.uid, name: winner.name });
-                                  setClaimCode(winner.couponCode ?? "");
-                                  setClaimDone(false);
-                                  setClaimError("");
-                                }}
-                                className="text-[11px] underline text-gray-500 hover:text-black"
-                              >
-                                Edit
-                              </button>
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setClaimTarget({ uid: winner.uid, name: winner.name });
-                                setClaimCode("");
-                                setClaimDone(false);
-                                setClaimError("");
-                              }}
-                              className="px-3 py-1.5 rounded-lg text-xs font-bold border border-black bg-white hover:bg-black hover:text-white transition-colors"
-                            >
-                              Claim Coupon
-                            </button>
+                    {winners.map((winner, index) => {
+                      const isExpanded = expandedWinner === winner.uid;
+                      return (
+                        <>
+                          <tr
+                            key={winner.uid}
+                            className="border-b border-gray-200 cursor-pointer hover:bg-gray-50"
+                            onClick={() => setExpandedWinner(isExpanded ? null : winner.uid)}
+                          >
+                            <td className="py-3 px-5 text-gray-700 font-mono">#{index + 1}</td>
+                            <td className="py-3 pr-4">
+                              <div className="font-semibold text-black">{winner.name}</div>
+                              <div className="text-xs text-gray-500">{winner.email}</div>
+                            </td>
+                            <td className="py-3 pr-4 text-gray-700">{locationLabel(winner)}</td>
+                            <td className="py-3 pr-4">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${winner.htCorrect > 0 ? "bg-black text-white" : "bg-gray-100 text-gray-500"}`}>
+                                {winner.htCorrect} / {winner.entries.filter(e => e.firstHalfWinner).length}
+                              </span>
+                            </td>
+                            <td className="py-3 pr-4 font-black text-black">{winner.points}</td>
+                            <td className="py-3 pr-5 text-right" onClick={e => e.stopPropagation()}>
+                              {winner.couponCode ? (
+                                <span className="inline-flex items-center gap-1.5">
+                                  <span className="font-mono font-bold text-black tracking-widest">{winner.couponCode}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setClaimTarget({ uid: winner.uid, name: winner.name });
+                                      setClaimCode(winner.couponCode ?? "");
+                                      setClaimDone(false);
+                                      setClaimError("");
+                                    }}
+                                    className="text-[11px] underline text-gray-500 hover:text-black"
+                                  >
+                                    Edit
+                                  </button>
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setClaimTarget({ uid: winner.uid, name: winner.name });
+                                    setClaimCode("");
+                                    setClaimDone(false);
+                                    setClaimError("");
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg text-xs font-bold border border-black bg-white hover:bg-black hover:text-white transition-colors"
+                                >
+                                  Claim Coupon
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr key={`${winner.uid}-picks`} className="bg-gray-50 border-b border-gray-200">
+                              <td colSpan={6} className="px-5 py-3">
+                                <p className="text-[11px] uppercase tracking-widest font-bold text-gray-400 mb-2">HT Picks</p>
+                                {winner.entries.filter(e => e.firstHalfWinner).length === 0 ? (
+                                  <p className="text-xs text-gray-400">No HT picks made.</p>
+                                ) : (
+                                  <div className="flex flex-col gap-1.5">
+                                    {winner.entries.filter(e => e.firstHalfWinner).map((e) => {
+                                      const fix = fixtureMap.get(`${e.teamA}|${e.teamB}`);
+                                      const actual = htActualWinner(e);
+                                      const correct = actual !== null && e.firstHalfWinner === actual;
+                                      const hasResult = actual !== null;
+                                      const htLabel = (w: PickWinner) =>
+                                        w === "A" ? e.teamA : w === "B" ? e.teamB : w === "draw" ? "Draw" : "—";
+                                      return (
+                                        <div key={String(e.matchId)} className="flex items-center gap-3 text-xs">
+                                          <span className="text-gray-600 font-medium w-40 truncate">{e.teamA} vs {e.teamB}</span>
+                                          <span className="text-gray-500">Pick: <span className="font-bold text-black">{htLabel(e.firstHalfWinner)}</span></span>
+                                          {fix && (fix.status === "halftime" || fix.status === "finished" || fix.htScoreA !== "" || fix.htScoreB !== "") ? (
+                                            <>
+                                              <span className="text-gray-400">HT: <span className="font-bold text-black">{fix.htScoreA}–{fix.htScoreB}</span></span>
+                                              <span className="text-gray-500">Actual: <span className="font-bold text-black">{htLabel(actual)}</span></span>
+                                              {hasResult && (
+                                                <span className={`font-bold ${correct ? "text-green-600" : "text-red-500"}`}>
+                                                  {correct ? "✓ Correct" : "✗ Wrong"}
+                                                </span>
+                                              )}
+                                            </>
+                                          ) : (
+                                            <span className="text-gray-400 italic">No HT result yet</span>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
                           )}
-                        </td>
-                      </tr>
-                    ))}
+                        </>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1432,6 +1648,125 @@ export default function AdminDashboard() {
               ))}
             </div>
           )}
+          </section>
+        )}
+
+        {/* ── Trivia Tab ───────────────────────────────────────────── */}
+        {activeTab === "trivia" && (
+          <section className="rounded-2xl bg-white border border-black overflow-hidden">
+            <div className="px-5 py-4 border-b border-black flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <h2 className="text-lg font-black text-black">Trivia Questions</h2>
+                <p className="text-xs text-gray-500 mt-1">Add questions that appear on the /trivia page.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void seedTriviaQuestions()}
+                disabled={seeding}
+                className="px-4 py-2 rounded-xl text-xs font-black border border-black bg-white hover:bg-black hover:text-white transition-colors disabled:opacity-50 flex-shrink-0"
+              >
+                {seeding ? "Loading…" : `⚽ Load ${TRIVIA_SEEDS.length} Sample Questions`}
+              </button>
+            </div>
+
+            {/* Add question form */}
+            <div className="px-5 py-5 border-b border-gray-200">
+              <p className="text-xs uppercase tracking-widest font-bold text-gray-400 mb-4">Add Question</p>
+              <div className="flex flex-col gap-3">
+                <textarea
+                  rows={2}
+                  placeholder="Question text…"
+                  value={tQuestion}
+                  onChange={(e) => setTQuestion(e.target.value)}
+                  className="w-full rounded-xl border border-black px-4 py-2.5 text-sm text-black outline-none focus:ring-2 focus:ring-black resize-none"
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  {(["A","B","C","D"] as const).map((opt) => (
+                    <div key={opt} className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs font-black flex-shrink-0">{opt}</span>
+                      <input
+                        type="text"
+                        placeholder={`Option ${opt}${opt === "A" || opt === "B" ? " (required)" : " (optional)"}`}
+                        value={opt === "A" ? tA : opt === "B" ? tB : opt === "C" ? tC : tD}
+                        onChange={(e) => {
+                          if (opt === "A") setTA(e.target.value);
+                          else if (opt === "B") setTB(e.target.value);
+                          else if (opt === "C") setTC(e.target.value);
+                          else setTD(e.target.value);
+                        }}
+                        className="flex-1 min-w-0 rounded-xl border border-gray-200 px-3 py-2 text-sm text-black outline-none focus:border-black"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-gray-600">
+                    Correct answer
+                    <select
+                      value={tCorrect}
+                      onChange={(e) => setTCorrect(e.target.value as "A"|"B"|"C"|"D")}
+                      className="rounded-lg border border-black px-3 py-1.5 text-sm text-black outline-none"
+                    >
+                      {["A","B","C","D"].map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-semibold text-gray-600">
+                    Timer (sec)
+                    <input
+                      type="number"
+                      min={5} max={60}
+                      value={tTimer}
+                      onChange={(e) => setTTimer(Number(e.target.value))}
+                      className="w-16 rounded-lg border border-black px-3 py-1.5 text-sm text-black outline-none"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => void addTriviaQuestion()}
+                    disabled={tSaving}
+                    className="ml-auto px-4 py-2 rounded-xl text-xs font-black bg-black text-white hover:bg-gray-900 transition-colors disabled:opacity-50"
+                  >
+                    {tSaving ? "Saving…" : "+ Add Question"}
+                  </button>
+                </div>
+                {tError && <p className="text-xs text-red-500">{tError}</p>}
+              </div>
+            </div>
+
+            {/* Questions list */}
+            {triviaLoading ? (
+              <div className="px-5 py-8 text-sm text-gray-500">Loading questions…</div>
+            ) : triviaQuestions.length === 0 ? (
+              <div className="px-5 py-8 text-sm text-gray-500">No questions yet. Add one above.</div>
+            ) : (
+              <div>
+                {triviaQuestions.map((q, i) => (
+                  <div key={q.id} className="px-5 py-4 border-b border-gray-100 last:border-b-0">
+                    <div className="flex items-start gap-3">
+                      <span className="w-7 h-7 rounded-full bg-black text-white flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-black mb-2">{q.question}</p>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 mb-2">
+                          {(["A","B","C","D"] as const).filter((o) => q.options[o]).map((o) => (
+                            <p key={o} className={`text-xs ${o === q.correct ? "font-bold text-black" : "text-gray-500"}`}>
+                              {o === q.correct ? "✓ " : ""}{o}: {q.options[o]}
+                            </p>
+                          ))}
+                        </div>
+                        <p className="text-[11px] text-gray-400">Timer: {q.timer}s</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void deleteTriviaQuestion(q.id)}
+                        className="text-xs text-red-400 hover:text-red-600 font-bold flex-shrink-0 mt-0.5"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         )}
 

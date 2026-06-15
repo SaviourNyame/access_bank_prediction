@@ -30,7 +30,7 @@ export default function HeroSection({ location }: { location?: string }) {
       {/* dark vignette */}
       <div
         className="absolute inset-0 z-10 pointer-events-none"
-        style={{ background: "rgba(0,0,0,0.52)" }}
+        style={{ background: "rgba(0,0,0,0.82)" }}
       />
       {/* bottom gradient fade */}
       <div
@@ -60,15 +60,15 @@ export default function HeroSection({ location }: { location?: string }) {
           sizes="100vw"
         />
       </div>
-      <div className="sm:hidden absolute bottom-0 left-0 right-0 z-[21] pointer-events-none flex flex-col items-center pb-6">
+      <div className="sm:hidden absolute bottom-0 left-0 right-0 z-[21] pointer-events-none flex flex-col items-center pb-14">
         <Image
           src="/coupon.png"
           alt=""
           width={400}
           height={140}
           priority
-          className="w-[38%] h-auto"
-          sizes="38vw"
+          className="w-[24%] h-auto"
+          sizes="24vw"
         />
         <p className="text-white font-black text-lg tracking-widest uppercase mt-2 leading-tight text-center">
           Redeem Coupons
@@ -83,7 +83,9 @@ export default function HeroSection({ location }: { location?: string }) {
         )}
         <p className="text-white/60 text-[11px] text-center mt-2">
           By joining you agree to our{" "}
-          <span className="text-[#ee7e01] font-semibold">Terms &amp; Conditions</span>
+          <span className="text-[#ee7e01] font-semibold">
+            Terms &amp; Conditions
+          </span>
         </p>
       </div>
 
@@ -135,7 +137,6 @@ export default function HeroSection({ location }: { location?: string }) {
           </Link>
         </div>
       </div>
-
     </section>
   );
 }

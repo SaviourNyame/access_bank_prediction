@@ -16,6 +16,10 @@ type ApiFixture = {
     away: { id: number; name: string };
   };
   goals: { home: number | null; away: number | null };
+  score: {
+    halftime: { home: number | null; away: number | null };
+    fulltime: { home: number | null; away: number | null };
+  };
 };
 
 type ApiResponse = {
@@ -57,8 +61,10 @@ function toStatus(
 export type FixtureResult = {
   teamA: string; // home team (normalised)
   teamB: string; // away team (normalised)
-  scoreA: string; // home goals or ""
-  scoreB: string; // away goals or ""
+  scoreA: string; // home full-time goals or ""
+  scoreB: string; // away full-time goals or ""
+  htScoreA: string; // home half-time goals or ""
+  htScoreB: string; // away half-time goals or ""
   status: "upcoming" | "live" | "halftime" | "finished";
   elapsed: number | null;
 };
@@ -91,6 +97,8 @@ export async function GET() {
       teamB: normalizeName(f.teams.away.name),
       scoreA: f.goals.home != null ? String(f.goals.home) : "",
       scoreB: f.goals.away != null ? String(f.goals.away) : "",
+      htScoreA: f.score?.halftime?.home != null ? String(f.score.halftime.home) : "",
+      htScoreB: f.score?.halftime?.away != null ? String(f.score.halftime.away) : "",
       status: toStatus(f.fixture.status.short),
       elapsed: f.fixture.status.elapsed,
     }));
