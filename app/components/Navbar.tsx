@@ -281,6 +281,7 @@ export default function Navbar() {
   const [isAdmin, setIsAdmin] = useState(false);
   const profileWrapRef  = useRef<HTMLDivElement | null>(null);
   const holdTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   function startHold() {
     holdTimerRef.current = setTimeout(() => {
@@ -295,6 +296,44 @@ export default function Navbar() {
   function cancelHold() {
     if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
   }
+
+  // Track fullscreen state
+  useEffect(() => {
+    function onChange() { setIsFullscreen(!!document.fullscreenElement); }
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  // Pinch-to-exit-fullscreen
+  useEffect(() => {
+    let initialDist = 0;
+
+    function getDistance(touches: TouchList) {
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.hypot(dx, dy);
+    }
+
+    function onTouchStart(e: TouchEvent) {
+      if (e.touches.length === 2) initialDist = getDistance(e.touches);
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      if (e.touches.length !== 2 || !document.fullscreenElement) return;
+      const dist = getDistance(e.touches);
+      if (initialDist > 0 && dist < initialDist * 0.7) {
+        document.exitFullscreen().catch(() => {});
+        initialDist = 0;
+      }
+    }
+
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+    };
+  }, []);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -419,7 +458,7 @@ export default function Navbar() {
         onTouchEnd={cancelHold}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-20">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-3">
               <Image
@@ -427,7 +466,7 @@ export default function Navbar() {
                 alt="Access Bank"
                 width={160}
                 height={48}
-                className="object-contain h-10 w-auto"
+                className="object-contain h-14 w-auto"
                 priority
               />
               <div
@@ -477,6 +516,21 @@ export default function Navbar() {
 
             {/* Right side — profile button (always visible) + hamburger */}
             <div className="flex items-center gap-2">
+              {/* Exit fullscreen button — only shown when fullscreen */}
+              {isFullscreen && (
+                <button
+                  type="button"
+                  onClick={() => document.exitFullscreen().catch(() => {})}
+                  className="w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-95"
+                  style={{ background: "rgba(0,0,0,0.08)", border: "1.5px solid #e5e7eb" }}
+                  title="Exit fullscreen"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/>
+                    <path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/>
+                  </svg>
+                </button>
+              )}
               {/* Profile avatar button */}
               <div className="relative" ref={profileWrapRef}>
                 <button
