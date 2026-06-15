@@ -13,11 +13,12 @@ export type TriviaQuestion = {
   correct: Option;
   timer: number;
   order: number;
+  difficulty?: "easy" | "medium" | "hard";
 };
 
 type Phase = "idle" | "playing" | "won" | "finished";
 
-const TOTAL_TIME = 120; // 2 minutes
+const TOTAL_TIME = 60; // 1 minute
 
 const OPTS: Option[] = ["A", "B", "C", "D"];
 
@@ -77,7 +78,19 @@ export default function TriviaClient() {
   });
 
   function startGame() {
-    setQuestions((q) => shuffle(q));
+    setQuestions((all) => {
+      const hard  = shuffle(all.filter((q) => q.difficulty === "hard"));
+      const other = shuffle(all.filter((q) => q.difficulty !== "hard"));
+      // Interleave 2 hard : 1 other so hard questions appear throughout
+      const queue: TriviaQuestion[] = [];
+      let hi = 0, oi = 0;
+      while (hi < hard.length || oi < other.length) {
+        if (hi < hard.length)  queue.push(hard[hi++]);
+        if (hi < hard.length)  queue.push(hard[hi++]);
+        if (oi < other.length) queue.push(other[oi++]);
+      }
+      return queue;
+    });
     setTotalTime(TOTAL_TIME);
     setTimeLeft(TOTAL_TIME);
     setPhase("playing");
@@ -110,13 +123,15 @@ export default function TriviaClient() {
   }
 
   function advance() {
-    const next = current + 1;
-    if (next >= questions.length) {
-      setPhase("finished");
-    } else {
-      setCurrent(next);
-      setSelected(null);
-    }
+    setCurrent((prev) => {
+      const next = prev + 1;
+      if (next >= questions.length) {
+        setPhase("finished");
+        return prev;
+      }
+      return next;
+    });
+    setSelected(null);
   }
 
   const timerPct   = totalTime > 0 ? (timeLeft / totalTime) * 100 : 0;
@@ -172,7 +187,7 @@ export default function TriviaClient() {
           {/* Instructions */}
           <p className="text-white/60 text-lg leading-relaxed mb-8 text-center">
             Answer up to <span className="text-white font-bold">10 correct questions</span> within{" "}
-            <span className="text-white font-bold">2 minutes</span> to win a coupon redeemable at any viewing centre.
+            <span className="text-white font-bold">1 minute</span> to win a coupon redeemable here.
           </p>
 
           <button
@@ -354,7 +369,7 @@ export default function TriviaClient() {
 
       {/* Question box */}
       <div
-        className="rounded-2xl mb-6 px-6 py-16 text-center"
+        className="rounded-2xl mb-6 px-6 py-10 text-center"
       >
         <p className="text-white font-black text-xl leading-snug">{q.question}</p>
       </div>
