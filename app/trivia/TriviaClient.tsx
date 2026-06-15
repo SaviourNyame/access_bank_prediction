@@ -19,7 +19,7 @@ export type TriviaQuestion = {
 
 type Phase = "idle" | "playing" | "won" | "finished";
 
-const TOTAL_TIME = 60; // 1 minute
+const TOTAL_TIME = 90; // 1:30
 
 const OPTS: Option[] = ["A", "B", "C", "D"];
 
@@ -90,11 +90,10 @@ export default function TriviaClient() {
     setQuestions((all) => {
       const hard  = shuffle(all.filter((q) => q.difficulty === "hard"));
       const other = shuffle(all.filter((q) => q.difficulty !== "hard"));
-      // Interleave 2 hard : 1 other so hard questions appear throughout
+      // Interleave 1 hard : 1 other → 50% hard, 50% medium/easy
       const queue: TriviaQuestion[] = [];
       let hi = 0, oi = 0;
       while (hi < hard.length || oi < other.length) {
-        if (hi < hard.length)  queue.push(hard[hi++]);
         if (hi < hard.length)  queue.push(hard[hi++]);
         if (oi < other.length) queue.push(other[oi++]);
       }
@@ -177,7 +176,7 @@ export default function TriviaClient() {
         <div className="w-full max-w-sm">
           {/* Heading */}
           <div className="flex justify-center mb-3">
-            <Image src="/acesslogowhite.png" alt="Access Bank" width={140} height={44} className="h-10 w-auto object-contain" />
+            <Image src="/acesslogowhite.png" alt="Access Bank" width={360} height={120} className="h-32 w-auto object-contain" />
           </div>
           <h1 className="text-white font-black text-4xl leading-none mb-1 text-center">World Cup</h1>
           <h1 className="font-black text-4xl leading-none mb-8 text-center" style={{ color: "#ee7e01" }}>Trivia</h1>
@@ -198,7 +197,7 @@ export default function TriviaClient() {
           {/* Instructions */}
           <p className="text-white/60 text-lg leading-relaxed mb-8 text-center">
             Answer up to <span className="text-white font-bold">10 correct questions</span> within{" "}
-            <span className="text-white font-bold">1 minute</span> to win a coupon redeemable here.
+            <span className="text-white font-bold">1:30</span> to win a coupon redeemable here.
           </p>
 
           <button
@@ -254,71 +253,44 @@ export default function TriviaClient() {
 
   // ── Finished ─────────────────────────────────────────────────────────────────
   if (phase === "finished") {
-    const pct   = Math.round((score / questions.length) * 100);
-    const grade =
-      pct === 100 ? "Perfect! 🏆" :
-      pct >= 80   ? "Excellent! 🌟" :
-      pct >= 60   ? "Good effort! 👏" :
-      pct >= 40   ? "Keep trying! 💪" : "Study up! 📚";
+    const answered = answers.filter(Boolean).length;
 
     return (
-      <div className="max-w-lg mx-auto px-5 py-8">
-        {/* Result header */}
-        <div className="text-center mb-6">
-          <p className="text-white/50 text-xs uppercase tracking-widest mb-1">Your Score</p>
-          <p className="text-7xl font-black text-white mb-1">
-            {score}<span className="text-3xl text-white/30">/{questions.length}</span>
-          </p>
-          <p className="text-white font-bold text-lg">{grade}</p>
+      <div className="flex items-center justify-center min-h-[70vh] px-6">
+        <div className="w-full max-w-sm text-center">
+          <p className="text-white/40 text-xs uppercase tracking-[0.25em] mb-2">Time&apos;s Up</p>
+          <h1 className="text-white font-black text-4xl leading-none mb-1">Better</h1>
+          <h1 className="font-black text-4xl leading-none mb-10" style={{ color: "#ee7e01" }}>Luck Next Time!</h1>
 
-          {/* Score bar */}
-          <div className="mt-4 h-1.5 rounded-full mx-auto max-w-xs" style={{ background: "rgba(255,255,255,0.15)" }}>
-            <div className="h-1.5 rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: "#ee7e01" }} />
+          <div className="flex items-center justify-center gap-6 mb-10">
+            <div className="text-center">
+              <p className="text-white font-black text-5xl leading-none">{score}</p>
+              <p className="text-white/40 text-[11px] uppercase tracking-widest mt-2">Correct</p>
+            </div>
+            <div className="w-px h-10 bg-white/15" />
+            <div className="text-center">
+              <p className="font-black text-5xl leading-none" style={{ color: "#ee7e01" }}>{answered}</p>
+              <p className="text-white/40 text-[11px] uppercase tracking-widest mt-2">Answered</p>
+            </div>
+            <div className="w-px h-10 bg-white/15" />
+            <div className="text-center">
+              <p className="text-white font-black text-5xl leading-none">{questions.length - answered}</p>
+              <p className="text-white/40 text-[11px] uppercase tracking-widest mt-2">Skipped</p>
+            </div>
           </div>
-        </div>
 
-        {/* Play again */}
-        <button
-          type="button"
-          onClick={startGame}
-          className="w-full rounded-2xl py-4 text-sm font-black uppercase tracking-widest mb-6 transition-all active:scale-95"
-          style={{ background: "#fff", color: "#000" }}
-        >
-          Play Again
-        </button>
+          <p className="text-white/60 text-sm leading-relaxed mb-10">
+            You needed <span className="text-white font-bold">10 correct</span> to win a coupon. Give it another shot!
+          </p>
 
-        {/* Answer review */}
-        <div className="rounded-2xl overflow-hidden border border-white/15" style={{ background: "rgba(255,255,255,0.06)" }}>
-          {questions.map((q, i) => {
-            const picked   = answers[i];
-            const isRight  = picked === q.correct;
-            return (
-              <div
-                key={q.id}
-                className="px-5 py-4"
-                style={{ borderBottom: i < questions.length - 1 ? "1px solid rgba(255,255,255,0.08)" : "none" }}
-              >
-                <div className="flex items-start gap-3">
-                  <span
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5"
-                    style={{ background: isRight ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)", color: isRight ? "#4ade80" : "#f87171" }}
-                  >
-                    {isRight ? "✓" : "✗"}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-white text-sm font-semibold leading-snug mb-1">{q.question}</p>
-                    {!isRight && (
-                      <p className="text-white/40 text-xs">
-                        {picked ? `You: ${picked} — ${q.options[picked]}  ·  ` : "Time out  ·  "}
-                        <span className="text-green-400 font-bold">✓ {q.correct}: {q.options[q.correct]}</span>
-                      </p>
-                    )}
-                    {isRight && <p className="text-green-400 text-xs font-semibold">{q.options[q.correct]}</p>}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          <button
+            type="button"
+            onClick={startGame}
+            className="w-full rounded-2xl py-4 text-base font-black uppercase tracking-widest transition-all active:scale-95"
+            style={{ background: "#ee7e01", color: "#fff" }}
+          >
+            Try Again →
+          </button>
         </div>
       </div>
     );
