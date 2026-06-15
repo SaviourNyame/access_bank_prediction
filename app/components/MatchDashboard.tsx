@@ -589,23 +589,32 @@ function MatchRow({
     if (!saved) return null;
     switch (saved.selectedOption) {
       case "firstHalfWinner":
-        if (saved.firstHalfWinner === "A") return `FH Winner: ${match.teamA.name}`;
-        if (saved.firstHalfWinner === "B") return `FH Winner: ${match.teamB.name}`;
+        if (saved.firstHalfWinner === "A")
+          return `FH Winner: ${match.teamA.name}`;
+        if (saved.firstHalfWinner === "B")
+          return `FH Winner: ${match.teamB.name}`;
         if (saved.firstHalfWinner === "draw") return "FH Winner: Draw";
         return null;
       case "firstHalfFirstGoal":
-        if (saved.firstHalfFirstGoal === "A") return `FH First Goal: ${match.teamA.name}`;
-        if (saved.firstHalfFirstGoal === "B") return `FH First Goal: ${match.teamB.name}`;
-        if (saved.firstHalfFirstGoal === "none") return "FH First Goal: No goal";
+        if (saved.firstHalfFirstGoal === "A")
+          return `FH First Goal: ${match.teamA.name}`;
+        if (saved.firstHalfFirstGoal === "B")
+          return `FH First Goal: ${match.teamB.name}`;
+        if (saved.firstHalfFirstGoal === "none")
+          return "FH First Goal: No goal";
         return null;
       case "fullTimeWinner":
-        if (saved.fullTimeWinner === "A") return `FT Winner: ${match.teamA.name}`;
-        if (saved.fullTimeWinner === "B") return `FT Winner: ${match.teamB.name}`;
+        if (saved.fullTimeWinner === "A")
+          return `FT Winner: ${match.teamA.name}`;
+        if (saved.fullTimeWinner === "B")
+          return `FT Winner: ${match.teamB.name}`;
         if (saved.fullTimeWinner === "draw") return "FT Winner: Draw";
         return null;
       case "fullTimeFirstGoal":
-        if (saved.fullTimeFirstGoal === "A") return `FT First Goal: ${match.teamA.name}`;
-        if (saved.fullTimeFirstGoal === "B") return `FT First Goal: ${match.teamB.name}`;
+        if (saved.fullTimeFirstGoal === "A")
+          return `FT First Goal: ${match.teamA.name}`;
+        if (saved.fullTimeFirstGoal === "B")
+          return `FT First Goal: ${match.teamB.name}`;
         if (saved.fullTimeFirstGoal === "none") return "FT First Goal: No goal";
         return null;
       default:

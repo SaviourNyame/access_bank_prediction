@@ -185,7 +185,9 @@ export default function JoinSection({
                   required
                   placeholder="e.g. KofiPredictor99"
                   value={form.username}
-                  onChange={(e) => setForm({ ...form, username: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, username: e.target.value })
+                  }
                   className="w-full px-4 py-3 rounded-xl text-gray-900 placeholder-gray-400 outline-none transition-all border border-gray-200 focus:border-[#ee7e01] bg-gray-50 focus:bg-white"
                 />
               </div>

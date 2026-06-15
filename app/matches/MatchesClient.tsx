@@ -4,7 +4,14 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { MATCHES, type Match, type Round } from "@/lib/matches";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, type User } from "firebase/auth";
-import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
 import AuthDialog from "@/app/components/AuthDialog";
 import Navbar from "@/app/components/Navbar";
 
@@ -150,7 +157,13 @@ async function persistCustomPrediction(
     doc(db, "users", user.uid),
     {
       customPicks: {
-        [firestoreId]: { firestoreId, teamA, teamB, ...pred, savedAt: serverTimestamp() },
+        [firestoreId]: {
+          firestoreId,
+          teamA,
+          teamB,
+          ...pred,
+          savedAt: serverTimestamp(),
+        },
       },
       updatedAt: serverTimestamp(),
     },
@@ -628,17 +641,24 @@ function PredictDialog({
 }
 
 // ─── Match Row ────────────────────────────────────────────────────────────────
-function pickSummary(saved: Prediction | undefined, match: Match): string | null {
+function pickSummary(
+  saved: Prediction | undefined,
+  match: Match,
+): string | null {
   if (!saved) return null;
   switch (saved.selectedOption) {
     case "firstHalfWinner":
-      if (saved.firstHalfWinner === "A") return `FH Winner: ${match.teamA.name}`;
-      if (saved.firstHalfWinner === "B") return `FH Winner: ${match.teamB.name}`;
+      if (saved.firstHalfWinner === "A")
+        return `FH Winner: ${match.teamA.name}`;
+      if (saved.firstHalfWinner === "B")
+        return `FH Winner: ${match.teamB.name}`;
       if (saved.firstHalfWinner === "draw") return "FH Winner: Draw";
       return null;
     case "firstHalfFirstGoal":
-      if (saved.firstHalfFirstGoal === "A") return `FH First Goal: ${match.teamA.name}`;
-      if (saved.firstHalfFirstGoal === "B") return `FH First Goal: ${match.teamB.name}`;
+      if (saved.firstHalfFirstGoal === "A")
+        return `FH First Goal: ${match.teamA.name}`;
+      if (saved.firstHalfFirstGoal === "B")
+        return `FH First Goal: ${match.teamB.name}`;
       if (saved.firstHalfFirstGoal === "none") return "FH First Goal: No goal";
       return null;
     case "fullTimeWinner":
@@ -647,8 +667,10 @@ function pickSummary(saved: Prediction | undefined, match: Match): string | null
       if (saved.fullTimeWinner === "draw") return "FT Winner: Draw";
       return null;
     case "fullTimeFirstGoal":
-      if (saved.fullTimeFirstGoal === "A") return `FT First Goal: ${match.teamA.name}`;
-      if (saved.fullTimeFirstGoal === "B") return `FT First Goal: ${match.teamB.name}`;
+      if (saved.fullTimeFirstGoal === "A")
+        return `FT First Goal: ${match.teamA.name}`;
+      if (saved.fullTimeFirstGoal === "B")
+        return `FT First Goal: ${match.teamB.name}`;
       if (saved.fullTimeFirstGoal === "none") return "FT First Goal: No goal";
       return null;
     default:
@@ -675,7 +697,8 @@ function MatchRow({
   const pick = pickSummary(saved, match);
   const isGhanaMatch =
     match.teamA.name === "Ghana" || match.teamB.name === "Ghana";
-  const hasScore = (scoreA !== "" && scoreA != null) || (scoreB !== "" && scoreB != null);
+  const hasScore =
+    (scoreA !== "" && scoreA != null) || (scoreB !== "" && scoreB != null);
   const activeStatus = status ?? "upcoming";
 
   const formattedDateTime = (() => {
@@ -699,19 +722,29 @@ function MatchRow({
       className={`rounded-2xl overflow-hidden ${isGhanaMatch ? "cursor-pointer transition-transform hover:scale-[1.01] active:scale-[0.99]" : "cursor-default"}`}
       style={{
         background: "#ffffff",
-        border: activeStatus === "live" ? "1.5px solid #ee7e01" : "1.5px solid #e5e7eb",
+        border:
+          activeStatus === "live"
+            ? "1.5px solid #ee7e01"
+            : "1.5px solid #e5e7eb",
         boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
       }}
       onClick={isGhanaMatch ? onPredict : undefined}
     >
       {/* Date/time + status row */}
       <div className="px-4 pt-4 pb-1 flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-gray-400">{formattedDateTime}</span>
+        <span className="text-xs font-medium text-gray-400">
+          {formattedDateTime}
+        </span>
         {activeStatus !== "upcoming" && (
           <span
             className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
             style={{
-              background: activeStatus === "live" ? "#ee7e01" : activeStatus === "halftime" ? "#374151" : "#f3f4f6",
+              background:
+                activeStatus === "live"
+                  ? "#ee7e01"
+                  : activeStatus === "halftime"
+                    ? "#374151"
+                    : "#f3f4f6",
               color: activeStatus === "finished" ? "#6b7280" : "#fff",
             }}
           >
@@ -722,11 +755,16 @@ function MatchRow({
 
       {/* Teams + scores */}
       <div className="px-4 pb-3 flex flex-col gap-2.5 mt-2">
-        {([
-          { team: match.teamA, score: scoreA },
-          { team: match.teamB, score: scoreB },
-        ] as const).map(({ team, score }) => (
-          <div key={team.name} className="flex items-center justify-between gap-3">
+        {(
+          [
+            { team: match.teamA, score: scoreA },
+            { team: match.teamB, score: scoreB },
+          ] as const
+        ).map(({ team, score }) => (
+          <div
+            key={team.name}
+            className="flex items-center justify-between gap-3"
+          >
             <div className="flex items-center gap-3 min-w-0">
               <span
                 className="flex items-center justify-center w-9 h-9 rounded-full text-xl leading-none flex-shrink-0"
@@ -756,13 +794,18 @@ function MatchRow({
         {isGhanaMatch ? (
           pick ? (
             <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-bold truncate max-w-[140px]" style={{ color: "#ee7e01" }}>
+              <span
+                className="text-[11px] font-bold truncate max-w-[140px]"
+                style={{ color: "#ee7e01" }}
+              >
                 {pick}
               </span>
               <span className="text-[9px] text-gray-500">· tap to edit</span>
             </div>
           ) : (
-            <span className="text-xs font-bold" style={{ color: "#ee7e01" }}>Predict →</span>
+            <span className="text-xs font-bold" style={{ color: "#ee7e01" }}>
+              Predict →
+            </span>
           )
         ) : (
           <span className="text-xs text-gray-400">Not available</span>
@@ -795,24 +838,34 @@ function CustomMatchRow({
     ? (() => {
         switch (saved.selectedOption) {
           case "firstHalfWinner":
-            if (saved.firstHalfWinner === "A") return `FH Winner: ${match.teamA}`;
-            if (saved.firstHalfWinner === "B") return `FH Winner: ${match.teamB}`;
+            if (saved.firstHalfWinner === "A")
+              return `FH Winner: ${match.teamA}`;
+            if (saved.firstHalfWinner === "B")
+              return `FH Winner: ${match.teamB}`;
             if (saved.firstHalfWinner === "draw") return "FH Winner: Draw";
             return null;
           case "firstHalfFirstGoal":
-            if (saved.firstHalfFirstGoal === "A") return `FH First Goal: ${match.teamA}`;
-            if (saved.firstHalfFirstGoal === "B") return `FH First Goal: ${match.teamB}`;
-            if (saved.firstHalfFirstGoal === "none") return "FH First Goal: No goal";
+            if (saved.firstHalfFirstGoal === "A")
+              return `FH First Goal: ${match.teamA}`;
+            if (saved.firstHalfFirstGoal === "B")
+              return `FH First Goal: ${match.teamB}`;
+            if (saved.firstHalfFirstGoal === "none")
+              return "FH First Goal: No goal";
             return null;
           case "fullTimeWinner":
-            if (saved.fullTimeWinner === "A") return `FT Winner: ${match.teamA}`;
-            if (saved.fullTimeWinner === "B") return `FT Winner: ${match.teamB}`;
+            if (saved.fullTimeWinner === "A")
+              return `FT Winner: ${match.teamA}`;
+            if (saved.fullTimeWinner === "B")
+              return `FT Winner: ${match.teamB}`;
             if (saved.fullTimeWinner === "draw") return "FT Winner: Draw";
             return null;
           case "fullTimeFirstGoal":
-            if (saved.fullTimeFirstGoal === "A") return `FT First Goal: ${match.teamA}`;
-            if (saved.fullTimeFirstGoal === "B") return `FT First Goal: ${match.teamB}`;
-            if (saved.fullTimeFirstGoal === "none") return "FT First Goal: No goal";
+            if (saved.fullTimeFirstGoal === "A")
+              return `FT First Goal: ${match.teamA}`;
+            if (saved.fullTimeFirstGoal === "B")
+              return `FT First Goal: ${match.teamB}`;
+            if (saved.fullTimeFirstGoal === "none")
+              return "FT First Goal: No goal";
             return null;
           default:
             return null;
@@ -823,7 +876,11 @@ function CustomMatchRow({
   return (
     <div
       className="rounded-2xl overflow-hidden cursor-pointer transition-transform hover:scale-[1.01] active:scale-[0.99]"
-      style={{ background: "#ffffff", border: "1.5px solid #e5e7eb", boxShadow: "0 4px 16px rgba(0,0,0,0.06)" }}
+      style={{
+        background: "#ffffff",
+        border: "1.5px solid #e5e7eb",
+        boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
+      }}
       onClick={onPredict}
     >
       {/* Status / date row */}
@@ -835,7 +892,12 @@ function CustomMatchRow({
         <span
           className="text-[10px] font-bold px-2 py-0.5 rounded-full"
           style={{
-            background: match.status === "live" ? "#ee7e01" : match.status === "halftime" ? "#374151" : "#f3f4f6",
+            background:
+              match.status === "live"
+                ? "#ee7e01"
+                : match.status === "halftime"
+                  ? "#374151"
+                  : "#f3f4f6",
             color: match.status === "upcoming" ? "#6b7280" : "#fff",
           }}
         >
@@ -845,8 +907,14 @@ function CustomMatchRow({
 
       {/* Teams + score */}
       <div className="px-4 pb-3 flex flex-col gap-2.5 mt-2">
-        {[{ name: match.teamA, score: match.scoreA }, { name: match.teamB, score: match.scoreB }].map((team) => (
-          <div key={team.name} className="flex items-center justify-between gap-3">
+        {[
+          { name: match.teamA, score: match.scoreA },
+          { name: match.teamB, score: match.scoreB },
+        ].map((team) => (
+          <div
+            key={team.name}
+            className="flex items-center justify-between gap-3"
+          >
             <div className="flex items-center gap-3">
               <span
                 className="flex items-center justify-center w-9 h-9 rounded-full text-sm font-black flex-shrink-0"
@@ -854,25 +922,39 @@ function CustomMatchRow({
               >
                 {team.name.slice(0, 2).toUpperCase()}
               </span>
-              <span className="font-bold text-gray-900 text-sm sm:text-base truncate">{team.name}</span>
+              <span className="font-bold text-gray-900 text-sm sm:text-base truncate">
+                {team.name}
+              </span>
             </div>
             {hasScore && (
-              <span className="font-black text-gray-900 text-lg font-mono">{team.score || "0"}</span>
+              <span className="font-black text-gray-900 text-lg font-mono">
+                {team.score || "0"}
+              </span>
             )}
           </div>
         ))}
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-2.5 flex items-center justify-between" style={{ borderTop: "1px solid #f0f0f0" }}>
+      <div
+        className="px-4 py-2.5 flex items-center justify-between"
+        style={{ borderTop: "1px solid #f0f0f0" }}
+      >
         <Countdown ms={deadlineMs} mobileDaysOnly />
         {pick ? (
           <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-bold truncate max-w-[140px]" style={{ color: "#ee7e01" }}>{pick}</span>
+            <span
+              className="text-[11px] font-bold truncate max-w-[140px]"
+              style={{ color: "#ee7e01" }}
+            >
+              {pick}
+            </span>
             <span className="text-[9px] text-gray-500">· tap to edit</span>
           </div>
         ) : (
-          <span className="text-xs font-bold" style={{ color: "#ee7e01" }}>Predict →</span>
+          <span className="text-xs font-bold" style={{ color: "#ee7e01" }}>
+            Predict →
+          </span>
         )}
       </div>
     </div>
@@ -925,11 +1007,24 @@ export default function MatchesClient() {
   const [user, setUser] = useState<User | null>(null);
 
   const [customMatches, setCustomMatches] = useState<CustomMatch[]>([]);
-  const [savedCustom, setSavedCustom] = useState<Record<string, Prediction>>({});
+  const [savedCustom, setSavedCustom] = useState<Record<string, Prediction>>(
+    {},
+  );
   const [customDialog, setCustomDialog] = useState<CustomMatch | null>(null);
-  const [authPendingCustom, setAuthPendingCustom] = useState<CustomMatch | null>(null);
-  const [adminOverrides, setAdminOverrides] = useState<Record<number, { scoreA: string; scoreB: string; status: CustomMatch["status"] }>>({});
-  const [apiScores, setApiScores] = useState<Record<number, { scoreA: string; scoreB: string; status: CustomMatch["status"] }>>({});
+  const [authPendingCustom, setAuthPendingCustom] =
+    useState<CustomMatch | null>(null);
+  const [adminOverrides, setAdminOverrides] = useState<
+    Record<
+      number,
+      { scoreA: string; scoreB: string; status: CustomMatch["status"] }
+    >
+  >({});
+  const [apiScores, setApiScores] = useState<
+    Record<
+      number,
+      { scoreA: string; scoreB: string; status: CustomMatch["status"] }
+    >
+  >({});
 
   // API scores take precedence over admin-set overrides
   const matchOverrides = useMemo(
@@ -943,9 +1038,15 @@ export default function MatchesClient() {
       try {
         const snap = await getDocs(collection(db, "adminMatches"));
         const list: CustomMatch[] = [];
-        const overrides: Record<number, { scoreA: string; scoreB: string; status: CustomMatch["status"] }> = {};
+        const overrides: Record<
+          number,
+          { scoreA: string; scoreB: string; status: CustomMatch["status"] }
+        > = {};
         snap.docs.forEach((d) => {
-          const data = d.data() as Omit<CustomMatch, "firestoreId"> & { isCustom?: boolean; staticId?: number };
+          const data = d.data() as Omit<CustomMatch, "firestoreId"> & {
+            isCustom?: boolean;
+            staticId?: number;
+          };
           if (data.isCustom) {
             list.push({ ...data, firestoreId: d.id });
           } else if (data.staticId != null) {
@@ -982,13 +1083,18 @@ export default function MatchesClient() {
         const data = (await res.json()) as { fixtures?: FixtureRow[] };
         if (!data.fixtures) return;
 
-        const scores: Record<number, { scoreA: string; scoreB: string; status: CustomMatch["status"] }> = {};
+        const scores: Record<
+          number,
+          { scoreA: string; scoreB: string; status: CustomMatch["status"] }
+        > = {};
 
         for (const fixture of data.fixtures) {
           const match = MATCHES.find(
             (m) =>
-              (m.teamA.name === fixture.teamA && m.teamB.name === fixture.teamB) ||
-              (m.teamA.name === fixture.teamB && m.teamB.name === fixture.teamA),
+              (m.teamA.name === fixture.teamA &&
+                m.teamB.name === fixture.teamB) ||
+              (m.teamA.name === fixture.teamB &&
+                m.teamB.name === fixture.teamA),
           );
           if (!match) continue;
 
@@ -1022,8 +1128,15 @@ export default function MatchesClient() {
 
       try {
         const snap = await getDoc(doc(db, "users", firebaseUser.uid));
-        if (!snap.exists()) { setSaved({}); setSavedCustom({}); return; }
-        const data = snap.data() as { picks?: unknown; customPicks?: Record<string, unknown> };
+        if (!snap.exists()) {
+          setSaved({});
+          setSavedCustom({});
+          return;
+        }
+        const data = snap.data() as {
+          picks?: unknown;
+          customPicks?: Record<string, unknown>;
+        };
         setSaved(toSavedPicks(data.picks));
 
         // Load custom picks
@@ -1041,10 +1154,30 @@ export default function MatchesClient() {
                 : null;
             cp[id] = {
               selectedOption,
-              firstHalfWinner: p.firstHalfWinner === "A" || p.firstHalfWinner === "B" || p.firstHalfWinner === "draw" ? p.firstHalfWinner : null,
-              firstHalfFirstGoal: p.firstHalfFirstGoal === "A" || p.firstHalfFirstGoal === "B" || p.firstHalfFirstGoal === "none" ? p.firstHalfFirstGoal : null,
-              fullTimeWinner: p.fullTimeWinner === "A" || p.fullTimeWinner === "B" || p.fullTimeWinner === "draw" ? p.fullTimeWinner : null,
-              fullTimeFirstGoal: p.fullTimeFirstGoal === "A" || p.fullTimeFirstGoal === "B" || p.fullTimeFirstGoal === "none" ? p.fullTimeFirstGoal : null,
+              firstHalfWinner:
+                p.firstHalfWinner === "A" ||
+                p.firstHalfWinner === "B" ||
+                p.firstHalfWinner === "draw"
+                  ? p.firstHalfWinner
+                  : null,
+              firstHalfFirstGoal:
+                p.firstHalfFirstGoal === "A" ||
+                p.firstHalfFirstGoal === "B" ||
+                p.firstHalfFirstGoal === "none"
+                  ? p.firstHalfFirstGoal
+                  : null,
+              fullTimeWinner:
+                p.fullTimeWinner === "A" ||
+                p.fullTimeWinner === "B" ||
+                p.fullTimeWinner === "draw"
+                  ? p.fullTimeWinner
+                  : null,
+              fullTimeFirstGoal:
+                p.fullTimeFirstGoal === "A" ||
+                p.fullTimeFirstGoal === "B" ||
+                p.fullTimeFirstGoal === "none"
+                  ? p.fullTimeFirstGoal
+                  : null,
             };
           }
         }
@@ -1078,9 +1211,14 @@ export default function MatchesClient() {
     (pred: Prediction) => {
       if (!customDialog) return;
       setSavedCustom((s) => ({ ...s, [customDialog.firestoreId]: pred }));
-      void persistCustomPrediction(customDialog.firestoreId, customDialog.teamA, customDialog.teamB, pred).catch(
-        (err: unknown) => { console.error("Failed to save custom prediction", err); },
-      );
+      void persistCustomPrediction(
+        customDialog.firestoreId,
+        customDialog.teamA,
+        customDialog.teamB,
+        pred,
+      ).catch((err: unknown) => {
+        console.error("Failed to save custom prediction", err);
+      });
       setCustomDialog(null);
     },
     [customDialog],
@@ -1123,7 +1261,9 @@ export default function MatchesClient() {
         {/* Custom matches */}
         {customMatches.length > 0 && (
           <div className="mb-10">
-            <h2 className="text-lg font-black text-gray-900 mb-4">Special Matches</h2>
+            <h2 className="text-lg font-black text-gray-900 mb-4">
+              Special Matches
+            </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {customMatches.map((cm) => (
                 <CustomMatchRow

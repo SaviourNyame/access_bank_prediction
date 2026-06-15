@@ -231,7 +231,9 @@ export default function TodayMatchesPopup() {
       setAuthOpen(true);
       return;
     }
-    const chosenCount = Object.values(picks).filter((pick) => hasAnyPick(pick)).length;
+    const chosenCount = Object.values(picks).filter((pick) =>
+      hasAnyPick(pick),
+    ).length;
     if (chosenCount === 0) return;
     setSaving(true);
     try {
@@ -430,14 +432,20 @@ function PickScreen({
               >
                 <div>
                   <div className="flex items-center gap-2 text-sm font-black text-gray-900">
-                    <span className="text-lg leading-none">{match.teamA.flag}</span>
+                    <span className="text-lg leading-none">
+                      {match.teamA.flag}
+                    </span>
                     <span>{match.teamA.name}</span>
                     <span className="text-gray-400">vs</span>
-                    <span className="text-lg leading-none">{match.teamB.flag}</span>
+                    <span className="text-lg leading-none">
+                      {match.teamB.flag}
+                    </span>
                     <span>{match.teamB.name}</span>
                   </div>
                   <p className="text-[11px] text-gray-500 mt-1">
-                    Round {match.round} • {match.date.replace(".", " June ·").replace(".", "")} {match.time} UTC
+                    Round {match.round} •{" "}
+                    {match.date.replace(".", " June ·").replace(".", "")}{" "}
+                    {match.time} UTC
                   </p>
                 </div>
                 <span className="text-xs font-bold text-gray-500">
@@ -456,11 +464,13 @@ function PickScreen({
                       First Half
                     </p>
                     <div className="grid grid-cols-3 gap-2">
-                      {([
-                        ["A", `${match.teamA.flag} ${match.teamA.name}`],
-                        ["draw", "Draw"],
-                        ["B", `${match.teamB.flag} ${match.teamB.name}`],
-                      ] as const).map(([value, text]) => (
+                      {(
+                        [
+                          ["A", `${match.teamA.flag} ${match.teamA.name}`],
+                          ["draw", "Draw"],
+                          ["B", `${match.teamB.flag} ${match.teamB.name}`],
+                        ] as const
+                      ).map(([value, text]) => (
                         <button
                           key={`fh-w-${value}`}
                           type="button"
@@ -471,8 +481,14 @@ function PickScreen({
                           }
                           className="rounded-lg px-2 py-2 text-[11px] font-semibold border"
                           style={{
-                            borderColor: pick.firstHalfWinner === value ? "#ee7e01" : "#d1d5db",
-                            background: pick.firstHalfWinner === value ? "rgba(238,126,1,0.12)" : "#fff",
+                            borderColor:
+                              pick.firstHalfWinner === value
+                                ? "#ee7e01"
+                                : "#d1d5db",
+                            background:
+                              pick.firstHalfWinner === value
+                                ? "rgba(238,126,1,0.12)"
+                                : "#fff",
                             color: "#374151",
                           }}
                         >
@@ -480,25 +496,39 @@ function PickScreen({
                         </button>
                       ))}
                     </div>
-                    <p className="text-[11px] text-gray-500 mt-3 mb-1">First goal</p>
+                    <p className="text-[11px] text-gray-500 mt-3 mb-1">
+                      First goal
+                    </p>
                     <div className="grid grid-cols-3 gap-2">
-                      {([
-                        ["A", `${match.teamA.flag} ${match.teamA.name}`],
-                        ["none", "No goal"],
-                        ["B", `${match.teamB.flag} ${match.teamB.name}`],
-                      ] as const).map(([value, text]) => (
+                      {(
+                        [
+                          ["A", `${match.teamA.flag} ${match.teamA.name}`],
+                          ["none", "No goal"],
+                          ["B", `${match.teamB.flag} ${match.teamB.name}`],
+                        ] as const
+                      ).map(([value, text]) => (
                         <button
                           key={`fh-g-${value}`}
                           type="button"
                           onClick={() =>
-                            setSingleOptionPick(match.id, "firstHalfFirstGoal", {
-                              firstHalfFirstGoal: value,
-                            })
+                            setSingleOptionPick(
+                              match.id,
+                              "firstHalfFirstGoal",
+                              {
+                                firstHalfFirstGoal: value,
+                              },
+                            )
                           }
                           className="rounded-lg px-2 py-2 text-[11px] font-semibold border"
                           style={{
-                            borderColor: pick.firstHalfFirstGoal === value ? "#ee7e01" : "#d1d5db",
-                            background: pick.firstHalfFirstGoal === value ? "rgba(238,126,1,0.12)" : "#fff",
+                            borderColor:
+                              pick.firstHalfFirstGoal === value
+                                ? "#ee7e01"
+                                : "#d1d5db",
+                            background:
+                              pick.firstHalfFirstGoal === value
+                                ? "rgba(238,126,1,0.12)"
+                                : "#fff",
                             color: "#374151",
                           }}
                         >
@@ -513,11 +543,13 @@ function PickScreen({
                       Full Time
                     </p>
                     <div className="grid grid-cols-3 gap-2">
-                      {([
-                        ["A", `${match.teamA.flag} ${match.teamA.name}`],
-                        ["draw", "Draw"],
-                        ["B", `${match.teamB.flag} ${match.teamB.name}`],
-                      ] as const).map(([value, text]) => (
+                      {(
+                        [
+                          ["A", `${match.teamA.flag} ${match.teamA.name}`],
+                          ["draw", "Draw"],
+                          ["B", `${match.teamB.flag} ${match.teamB.name}`],
+                        ] as const
+                      ).map(([value, text]) => (
                         <button
                           key={`ft-w-${value}`}
                           type="button"
@@ -528,8 +560,14 @@ function PickScreen({
                           }
                           className="rounded-lg px-2 py-2 text-[11px] font-semibold border"
                           style={{
-                            borderColor: pick.fullTimeWinner === value ? "#ee7e01" : "#d1d5db",
-                            background: pick.fullTimeWinner === value ? "rgba(238,126,1,0.12)" : "#fff",
+                            borderColor:
+                              pick.fullTimeWinner === value
+                                ? "#ee7e01"
+                                : "#d1d5db",
+                            background:
+                              pick.fullTimeWinner === value
+                                ? "rgba(238,126,1,0.12)"
+                                : "#fff",
                             color: "#374151",
                           }}
                         >
@@ -537,13 +575,17 @@ function PickScreen({
                         </button>
                       ))}
                     </div>
-                    <p className="text-[11px] text-gray-500 mt-3 mb-1">First goal</p>
+                    <p className="text-[11px] text-gray-500 mt-3 mb-1">
+                      First goal
+                    </p>
                     <div className="grid grid-cols-3 gap-2">
-                      {([
-                        ["A", `${match.teamA.flag} ${match.teamA.name}`],
-                        ["none", "No goal"],
-                        ["B", `${match.teamB.flag} ${match.teamB.name}`],
-                      ] as const).map(([value, text]) => (
+                      {(
+                        [
+                          ["A", `${match.teamA.flag} ${match.teamA.name}`],
+                          ["none", "No goal"],
+                          ["B", `${match.teamB.flag} ${match.teamB.name}`],
+                        ] as const
+                      ).map(([value, text]) => (
                         <button
                           key={`ft-g-${value}`}
                           type="button"
@@ -554,8 +596,14 @@ function PickScreen({
                           }
                           className="rounded-lg px-2 py-2 text-[11px] font-semibold border"
                           style={{
-                            borderColor: pick.fullTimeFirstGoal === value ? "#ee7e01" : "#d1d5db",
-                            background: pick.fullTimeFirstGoal === value ? "rgba(238,126,1,0.12)" : "#fff",
+                            borderColor:
+                              pick.fullTimeFirstGoal === value
+                                ? "#ee7e01"
+                                : "#d1d5db",
+                            background:
+                              pick.fullTimeFirstGoal === value
+                                ? "rgba(238,126,1,0.12)"
+                                : "#fff",
                             color: "#374151",
                           }}
                         >

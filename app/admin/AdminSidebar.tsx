@@ -13,6 +13,7 @@ const ITEMS: SidebarItem[] = [
   { id: "entries", label: "Entries" },
   { id: "users", label: "Users" },
   { id: "winners", label: "Winners" },
+  { id: "trivia", label: "Trivia" },
 ];
 
 export default function AdminSidebar() {

@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { collection, getDocs, type DocumentData, type QueryDocumentSnapshot } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  type DocumentData,
+  type QueryDocumentSnapshot,
+} from "firebase/firestore";
 import Navbar from "@/app/components/Navbar";
 import { db } from "@/lib/firebase";
 import { MATCHES } from "@/lib/matches";
@@ -81,7 +86,11 @@ function firstGoalLabel(value: unknown, teamA: string, teamB: string): string {
   return "Not set";
 }
 
-function inferSelectedPick(pick: Record<string, unknown>, teamA: string, teamB: string): string {
+function inferSelectedPick(
+  pick: Record<string, unknown>,
+  teamA: string,
+  teamB: string,
+): string {
   const selectedOption =
     pick.selectedOption === "firstHalfWinner" ||
     pick.selectedOption === "firstHalfFirstGoal" ||
@@ -152,10 +161,18 @@ function inferResultState(pick: Record<string, unknown>): ResultState {
         ? pick.status.toLowerCase()
         : "";
 
-  if (resultText === "won" || resultText === "win" || resultText === "correct") {
+  if (
+    resultText === "won" ||
+    resultText === "win" ||
+    resultText === "correct"
+  ) {
     return "won";
   }
-  if (resultText === "lost" || resultText === "lose" || resultText === "incorrect") {
+  if (
+    resultText === "lost" ||
+    resultText === "lose" ||
+    resultText === "incorrect"
+  ) {
     return "lost";
   }
 
@@ -170,16 +187,19 @@ function flagForTeam(teamName: string): string {
   return TEAM_FLAG_MAP.get(teamName) ?? "⚽";
 }
 
-function toEntryCards(docSnap: QueryDocumentSnapshot<DocumentData>): EntryCard[] {
+function toEntryCards(
+  docSnap: QueryDocumentSnapshot<DocumentData>,
+): EntryCard[] {
   const data = docSnap.data() as UserDoc;
   const name =
     data.name ||
     data.displayName ||
     (data.email ? data.email.split("@")[0] : "Anonymous");
 
-  const picks = data.picks && typeof data.picks === "object"
-    ? (data.picks as Record<string, unknown>)
-    : {};
+  const picks =
+    data.picks && typeof data.picks === "object"
+      ? (data.picks as Record<string, unknown>)
+      : {};
 
   const cards: EntryCard[] = [];
 
@@ -213,12 +233,13 @@ function toEntryCards(docSnap: QueryDocumentSnapshot<DocumentData>): EntryCard[]
   return cards;
 }
 
-function statusStyles(state: ResultState): { label: string; className: string } | null {
+function statusStyles(
+  state: ResultState,
+): { label: string; className: string } | null {
   if (state === "won") {
     return {
       label: "Prediction Won",
-      className:
-        "bg-emerald-100 text-emerald-800 border border-emerald-200",
+      className: "bg-emerald-100 text-emerald-800 border border-emerald-200",
     };
   }
 
@@ -265,7 +286,9 @@ export default function EnteeriesPage() {
       } catch (err) {
         console.error("Failed to load entries", err);
         if (!cancelled) {
-          setError("Could not load entries. Check Firestore read permissions for users.");
+          setError(
+            "Could not load entries. Check Firestore read permissions for users.",
+          );
         }
       } finally {
         if (!cancelled) {
@@ -284,7 +307,9 @@ export default function EnteeriesPage() {
   const stats = useMemo(() => {
     const total = cards.length;
     const won = cards.filter((card) => card.resultState === "won").length;
-    const pending = cards.filter((card) => card.resultState === "pending").length;
+    const pending = cards.filter(
+      (card) => card.resultState === "pending",
+    ).length;
     return { total, won, pending };
   }, [cards]);
 
@@ -309,7 +334,9 @@ export default function EnteeriesPage() {
               Enteeries
             </h1>
             <p className="text-sm text-gray-600 mt-2 max-w-2xl">
-              Every submitted pick appears here with user profile details and selected option. Won predictions are highlighted automatically when result fields are present.
+              Every submitted pick appears here with user profile details and
+              selected option. Won predictions are highlighted automatically
+              when result fields are present.
             </p>
 
             <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-5 max-w-xl">
@@ -317,19 +344,25 @@ export default function EnteeriesPage() {
                 <p className="text-[11px] uppercase tracking-wider text-gray-400 font-bold">
                   Total Picks
                 </p>
-                <p className="text-2xl font-black text-gray-900 mt-1">{stats.total}</p>
+                <p className="text-2xl font-black text-gray-900 mt-1">
+                  {stats.total}
+                </p>
               </div>
               <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3">
                 <p className="text-[11px] uppercase tracking-wider text-gray-400 font-bold">
                   Won
                 </p>
-                <p className="text-2xl font-black text-emerald-700 mt-1">{stats.won}</p>
+                <p className="text-2xl font-black text-emerald-700 mt-1">
+                  {stats.won}
+                </p>
               </div>
               <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3">
                 <p className="text-[11px] uppercase tracking-wider text-gray-400 font-bold">
                   Awaiting
                 </p>
-                <p className="text-2xl font-black text-gray-700 mt-1">{stats.pending}</p>
+                <p className="text-2xl font-black text-gray-700 mt-1">
+                  {stats.pending}
+                </p>
               </div>
             </div>
           </div>
@@ -367,7 +400,12 @@ export default function EnteeriesPage() {
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div
                           className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black text-white flex-shrink-0"
-                          style={{ background: card.resultState === "won" ? "#059669" : "#111827" }}
+                          style={{
+                            background:
+                              card.resultState === "won"
+                                ? "#059669"
+                                : "#111827",
+                          }}
                         >
                           {(card.user.name || "U").charAt(0).toUpperCase()}
                         </div>

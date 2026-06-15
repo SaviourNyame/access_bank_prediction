@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { onAuthStateChanged, signOut, type User } from "firebase/auth";
-import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import { onAuthStateChanged, sendSignInLinkToEmail, signOut, type User } from "firebase/auth";
+import { collection, deleteField, doc, getDoc, getDocs, updateDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 
 type PickEntry = {
@@ -31,11 +31,19 @@ const STATUS_STYLE: Record<MatchStatus, string> = {
   finished: "bg-blue-100 text-blue-700",
 };
 
+function resolveWinner(winner: string, teamA: string, teamB: string): string {
+  if (winner === "A") return teamA;
+  if (winner === "B") return teamB;
+  if (winner === "draw") return "Draw";
+  return winner;
+}
+
 // ─── Profile Sheet / Dropdown ────────────────────────────────────────────────
 function ProfilePanel({
   user,
   picks,
   matchStatuses,
+  onDeletePick,
   onSignOut,
   onClose,
   mobile,
@@ -43,10 +51,34 @@ function ProfilePanel({
   user: User | null;
   picks: PickEntry[];
   matchStatuses: Record<number, MatchStatus>;
+  onDeletePick: (matchId: number) => void;
   onSignOut: () => void;
   onClose: () => void;
   mobile: boolean;
 }) {
+  const [signinEmail, setSigninEmail] = useState("");
+  const [signinSent, setSigninSent] = useState(false);
+  const [signinLoading, setSigninLoading] = useState(false);
+  const [signinError, setSigninError] = useState("");
+
+  async function handleSignIn(e: React.FormEvent) {
+    e.preventDefault();
+    setSigninError("");
+    setSigninLoading(true);
+    try {
+      await sendSignInLinkToEmail(auth, signinEmail, {
+        url: window.location.href,
+        handleCodeInApp: true,
+      });
+      window.localStorage.setItem("emailForSignIn", signinEmail);
+      setSigninSent(true);
+    } catch {
+      setSigninError("Could not send link. Check the email and try again.");
+    } finally {
+      setSigninLoading(false);
+    }
+  }
+
   const content = (
     <div className={mobile ? "px-5 pt-5 pb-8" : "p-4"}>
       {/* Handle bar (mobile only) */}
@@ -103,20 +135,28 @@ function ProfilePanel({
                         <span className="text-xs font-semibold text-gray-700 truncate">
                           {pick.teamA} vs {pick.teamB}
                         </span>
-                        <span
-                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${STATUS_STYLE[status]}`}
-                        >
-                          {STATUS_LABEL[status]}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${STATUS_STYLE[status]}`}>
+                            {STATUS_LABEL[status]}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => onDeletePick(pick.matchId)}
+                            className="w-4 h-4 flex items-center justify-center rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors text-[10px] leading-none"
+                            aria-label="Delete pick"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </div>
                       <p className="text-[11px] text-gray-500">
                         Pick:{" "}
                         <span className="font-bold text-gray-800">
-                          {pick.fullTimeWinner}
+                          {resolveWinner(pick.fullTimeWinner, pick.teamA, pick.teamB)}
                         </span>
                         {pick.firstHalfWinner && (
                           <span className="ml-2 text-gray-400">
-                            HT: {pick.firstHalfWinner}
+                            HT: {resolveWinner(pick.firstHalfWinner, pick.teamA, pick.teamB)}
                           </span>
                         )}
                       </p>
@@ -144,12 +184,50 @@ function ProfilePanel({
             Sign Out
           </button>
         </>
-      ) : (
-        <>
-          <p className="text-sm text-gray-600 mb-4">
-            You are not signed in yet.
+      ) : signinSent ? (
+        <div className="text-center py-2">
+          <p className="text-sm font-black text-gray-900 mb-1">Check your email</p>
+          <p className="text-xs text-gray-500 mb-4">
+            We sent a sign-in link to <strong>{signinEmail}</strong>.
           </p>
-        </>
+          <button
+            type="button"
+            onClick={() => { setSigninSent(false); setSigninEmail(""); }}
+            className="text-xs text-[#ee7e01] underline"
+          >
+            Use a different email
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={(e) => void handleSignIn(e)} className="flex flex-col gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">
+              Email or Username
+            </label>
+            <input
+              type="email"
+              required
+              placeholder="you@example.com"
+              value={signinEmail}
+              onChange={(e) => setSigninEmail(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl text-sm text-gray-900 placeholder-gray-400 outline-none border border-gray-200 focus:border-[#ee7e01] bg-gray-50 focus:bg-white transition-all"
+            />
+          </div>
+          {signinError && (
+            <p className="text-xs text-red-500">{signinError}</p>
+          )}
+          <button
+            type="submit"
+            disabled={signinLoading}
+            className="w-full rounded-xl py-2.5 text-sm font-bold transition-colors disabled:opacity-50"
+            style={{ background: "#ee7e01", color: "#fff" }}
+          >
+            {signinLoading ? "Sending…" : "Send Sign-In Link →"}
+          </button>
+          <p className="text-[11px] text-gray-400 text-center">
+            No password needed — we&apos;ll email you a link.
+          </p>
+        </form>
       )}
     </div>
   );
@@ -197,18 +275,36 @@ export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [picks, setPicks] = useState<PickEntry[]>([]);
-  const [matchStatuses, setMatchStatuses] = useState<Record<number, MatchStatus>>({});
+  const [matchStatuses, setMatchStatuses] = useState<
+    Record<number, MatchStatus>
+  >({});
+  const [isAdmin, setIsAdmin] = useState(false);
   const profileWrapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u);
-      if (!u) { setPicks([]); return; }
+      if (!u) {
+        setPicks([]);
+        setIsAdmin(false);
+        return;
+      }
+
+      // Load admin match statuses — also used for match status in picks
+      const uidSnap = await getDoc(doc(db, "admins", u.uid));
+      const emailKey = u.email?.trim().toLowerCase() ?? "";
+      const emailSnap = emailKey
+        ? await getDoc(doc(db, "admins", emailKey))
+        : null;
+      setIsAdmin(uidSnap.exists() || (emailSnap?.exists() ?? false));
 
       // Load user picks
       const snap = await getDoc(doc(db, "users", u.uid));
       if (snap.exists()) {
-        const raw = (snap.data().picks ?? {}) as Record<string, Record<string, unknown>>;
+        const raw = (snap.data().picks ?? {}) as Record<
+          string,
+          Record<string, unknown>
+        >;
         const entries: PickEntry[] = Object.values(raw).map((p) => ({
           matchId: p.matchId as number,
           teamA: p.teamA as string,
@@ -223,7 +319,11 @@ export default function Navbar() {
       const adminSnap = await getDocs(collection(db, "adminMatches"));
       const statuses: Record<number, MatchStatus> = {};
       adminSnap.forEach((d) => {
-        const data = d.data() as { isCustom?: boolean; staticId?: number; status?: MatchStatus };
+        const data = d.data() as {
+          isCustom?: boolean;
+          staticId?: number;
+          status?: MatchStatus;
+        };
         if (!data.isCustom && data.staticId != null && data.status) {
           statuses[data.staticId] = data.status;
         }
@@ -232,6 +332,15 @@ export default function Navbar() {
     });
     return () => unsub();
   }, []);
+
+  async function deletePick(matchId: number) {
+    const u = auth.currentUser;
+    if (!u) return;
+    await updateDoc(doc(db, "users", u.uid), {
+      [`picks.${matchId}`]: deleteField(),
+    });
+    setPicks((prev) => prev.filter((p) => p.matchId !== matchId));
+  }
 
   useEffect(() => {
     function check() {
@@ -317,10 +426,10 @@ export default function Navbar() {
                 Matches
               </Link>
               <Link
-                href="/leaderboard"
+                href="/trivia"
                 className="text-gray-500 hover:text-[#ee7e01] transition-colors"
               >
-                Leaderboard
+                Trivia
               </Link>
               <Link
                 href="/enteeries"
@@ -328,12 +437,14 @@ export default function Navbar() {
               >
                 Enteeries
               </Link>
-              <Link
-                href="/admin"
-                className="text-gray-500 hover:text-[#ee7e01] transition-colors"
-              >
-                Admin
-              </Link>
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="text-gray-500 hover:text-[#ee7e01] transition-colors"
+                >
+                  Admin
+                </Link>
+              )}
               <Link
                 href="/#join"
                 className="text-gray-500 hover:text-[#ee7e01] transition-colors"
@@ -369,6 +480,7 @@ export default function Navbar() {
                     user={user}
                     picks={picks}
                     matchStatuses={matchStatuses}
+                    onDeletePick={(id) => void deletePick(id)}
                     mobile={false}
                     onClose={() => setProfileOpen(false)}
                     onSignOut={() => {
@@ -411,11 +523,11 @@ export default function Navbar() {
                 Matches
               </Link>
               <Link
-                href="/leaderboard"
+                href="/trivia"
                 className="text-gray-600 hover:text-[#ee7e01] transition-colors font-medium"
                 onClick={() => setMenuOpen(false)}
               >
-                Leaderboard
+                Trivia
               </Link>
               <Link
                 href="/enteeries"
@@ -424,13 +536,15 @@ export default function Navbar() {
               >
                 Enteeries
               </Link>
-              <Link
-                href="/admin"
-                className="text-gray-600 hover:text-[#ee7e01] transition-colors font-medium"
-                onClick={() => setMenuOpen(false)}
-              >
-                Admin
-              </Link>
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="text-gray-600 hover:text-[#ee7e01] transition-colors font-medium"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Admin
+                </Link>
+              )}
               <Link
                 href="/#join"
                 className="text-gray-600 hover:text-[#ee7e01] transition-colors font-medium"
@@ -449,6 +563,7 @@ export default function Navbar() {
           user={user}
           picks={picks}
           matchStatuses={matchStatuses}
+          onDeletePick={(id) => void deletePick(id)}
           mobile={true}
           onClose={() => setProfileOpen(false)}
           onSignOut={() => {
