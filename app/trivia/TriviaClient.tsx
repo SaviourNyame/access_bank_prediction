@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import Image from "next/image";
 import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -62,6 +63,14 @@ export default function TriviaClient() {
   }, []);
 
   const computedTotal = TOTAL_TIME;
+
+  // Hide navbar while playing
+  useEffect(() => {
+    const nav = document.querySelector("nav");
+    if (!nav) return;
+    (nav as HTMLElement).style.display = phase === "playing" ? "none" : "";
+    return () => { (nav as HTMLElement).style.display = ""; };
+  }, [phase]);
 
   // Global countdown
   useEffect(() => {
@@ -167,7 +176,9 @@ export default function TriviaClient() {
       <div className="flex items-center justify-center min-h-[70vh] px-6">
         <div className="w-full max-w-sm">
           {/* Heading */}
-          <p className="text-white/40 text-xs uppercase tracking-[0.25em] mb-2 text-center">Access Bank</p>
+          <div className="flex justify-center mb-3">
+            <Image src="/acesslogowhite.png" alt="Access Bank" width={140} height={44} className="h-10 w-auto object-contain" />
+          </div>
           <h1 className="text-white font-black text-4xl leading-none mb-1 text-center">World Cup</h1>
           <h1 className="font-black text-4xl leading-none mb-8 text-center" style={{ color: "#ee7e01" }}>Trivia</h1>
 
