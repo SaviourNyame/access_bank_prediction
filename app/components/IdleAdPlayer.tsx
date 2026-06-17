@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
 
 const ADS = [
   "/ads/WhatsApp Video 2026-06-15 at 16.57.41.mp4",
@@ -12,6 +13,7 @@ const ADS = [
 const IDLE_MS = 15_000;
 
 export default function IdleAdPlayer() {
+  const pathname = usePathname();
   const [active, setActive]     = useState(false);
   const [adIndex, setAdIndex]   = useState(0);
   const [showX, setShowX]       = useState(false);
@@ -64,6 +66,7 @@ export default function IdleAdPlayer() {
     v.play().catch(() => {});
   }, [active, adIndex]);
 
+  if (pathname?.startsWith("/admin")) return null;
   if (!active) return null;
 
   return (
