@@ -10,6 +10,7 @@ import {
   deleteDoc,
   serverTimestamp,
   setDoc,
+  updateDoc,
   type QueryDocumentSnapshot,
   type DocumentData,
 } from "firebase/firestore";
@@ -205,7 +206,7 @@ export default function AdminDashboard() {
   );
   const [locationMessage, setLocationMessage] = useState<string>("");
   const [activeTab, setActiveTab] = useState<
-    "home" | "matches" | "entries" | "users" | "winners" | "trivia"
+    "home" | "matches" | "entries" | "users" | "winners" | "trivia" | "coupons"
   >("home");
 
   const [halfTimeRevealed, setHalfTimeRevealed] = useState(false);
@@ -267,6 +268,23 @@ export default function AdminDashboard() {
   const [tSaving, setTSaving] = useState(false);
   const [tError, setTError] = useState("");
 
+  // Trivia coupons state
+  type TriviaCoupon = {
+    id: string;
+    code: string;
+    name: string;
+    phone: string;
+    wonAt: string;
+    redeemed: boolean;
+  };
+  const [coupons, setCoupons]               = useState<TriviaCoupon[]>([]);
+  const [couponsLoading, setCouponsLoading] = useState(false);
+  const [couponSearch, setCouponSearch]     = useState("");
+  const [redeemingId, setRedeemingId]       = useState<string | null>(null);
+  const [redeemTarget, setRedeemTarget]     = useState<TriviaCoupon | null>(null);
+  const [redeemInput, setRedeemInput]       = useState("");
+  const [redeemError, setRedeemError]       = useState("");
+
   // Poll football API for live + HT scores
   useEffect(() => {
     async function fetchFixtures() {
@@ -292,7 +310,8 @@ export default function AdminDashboard() {
         hash === "entries" ||
         hash === "users" ||
         hash === "winners" ||
-        hash === "trivia"
+        hash === "trivia" ||
+        hash === "coupons"
       ) {
         setActiveTab(hash);
       } else {
@@ -405,6 +424,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (activeTab === "matches" && isAdmin) void loadAdminMatches();
     if (activeTab === "trivia" && isAdmin) void loadTriviaQuestions();
+    if (activeTab === "coupons" && isAdmin) void loadCoupons();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, isAdmin]);
 
@@ -549,6 +569,35 @@ export default function AdminDashboard() {
       setTriviaQuestions((prev) => [...prev, ...added]);
     } finally {
       setSeeding(false);
+    }
+  }
+
+  async function loadCoupons() {
+    setCouponsLoading(true);
+    try {
+      const { query: fsQuery, orderBy } = await import("firebase/firestore");
+      const snap = await getDocs(fsQuery(collection(db, "triviaCoupons"), orderBy("wonAt", "desc")));
+      setCoupons(
+        snap.docs.map((d) => {
+          const data = d.data() as Omit<TriviaCoupon, "id">;
+          return { id: d.id, ...data };
+        }),
+      );
+    } finally {
+      setCouponsLoading(false);
+    }
+  }
+
+  async function redeemCoupon(id: string) {
+    setRedeemingId(id);
+    try {
+      await updateDoc(doc(db, "triviaCoupons", id), {
+        redeemed: true,
+        redeemedAt: serverTimestamp(),
+      });
+      setCoupons((prev) => prev.map((c) => (c.id === id ? { ...c, redeemed: true } : c)));
+    } finally {
+      setRedeemingId(null);
     }
   }
 
@@ -1768,6 +1817,165 @@ export default function AdminDashboard() {
               </div>
             )}
           </section>
+        )}
+
+        {/* ── Coupons Tab ──────────────────────────────────────────── */}
+        {activeTab === "coupons" && (() => {
+          const filtered = coupons.filter(
+            (c) =>
+              couponSearch.trim() === "" ||
+              c.name.toLowerCase().includes(couponSearch.toLowerCase()) ||
+              c.phone.includes(couponSearch.trim()),
+          );
+          const totalCoupons  = coupons.length;
+          const redeemedCount = coupons.filter((c) => c.redeemed).length;
+          const pendingCount  = totalCoupons - redeemedCount;
+
+          return (
+            <section className="space-y-4">
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-2xl bg-white p-5 border border-black">
+                  <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Total Won</p>
+                  <p className="text-3xl font-black text-black mt-2">{totalCoupons}</p>
+                </div>
+                <div className="rounded-2xl bg-white p-5 border border-black">
+                  <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Redeemed</p>
+                  <p className="text-3xl font-black text-black mt-2">{redeemedCount}</p>
+                </div>
+                <div className="rounded-2xl bg-white p-5 border border-black">
+                  <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Pending</p>
+                  <p className="text-3xl font-black text-black mt-2">{pendingCount}</p>
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="rounded-2xl bg-white border border-black overflow-hidden">
+                <div className="px-5 py-4 border-b border-black flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-black text-black">Trivia Coupons</h2>
+                    <p className="text-xs text-gray-500 mt-1">Players who won the trivia game. Tap Redeem when they present their code.</p>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search name or phone…"
+                    value={couponSearch}
+                    onChange={(e) => setCouponSearch(e.target.value)}
+                    className="rounded-lg border border-black px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-black w-full sm:w-56"
+                  />
+                </div>
+
+                {couponsLoading ? (
+                  <div className="px-5 py-8 text-sm text-gray-500">Loading coupons…</div>
+                ) : filtered.length === 0 ? (
+                  <div className="px-5 py-8 text-sm text-gray-500">
+                    {totalCoupons === 0 ? "No coupons issued yet." : "No coupons match your search."}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[640px] text-sm">
+                      <thead>
+                        <tr className="text-left text-gray-500 border-b border-black">
+                          <th className="py-3 px-5 font-semibold">Name</th>
+                          <th className="py-3 pr-4 font-semibold">Phone</th>
+                          <th className="py-3 pr-4 font-semibold">Won At</th>
+                          <th className="py-3 pr-5 font-semibold text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filtered.map((c) => (
+                          <tr key={c.id} className="border-b border-gray-200 last:border-0">
+                            <td className="py-3 px-5 font-semibold text-black">{c.name}</td>
+                            <td className="py-3 pr-4 text-gray-600">{c.phone}</td>
+                            <td className="py-3 pr-4 text-gray-500 text-xs">
+                              {c.wonAt ? new Date(c.wonAt).toLocaleString() : "—"}
+                            </td>
+                            <td className="py-3 pr-5 text-right">
+                              {c.redeemed ? (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-black text-white">
+                                  ✓ Redeemed
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => { setRedeemTarget(c); setRedeemInput(""); setRedeemError(""); }}
+                                  className="px-4 py-2 rounded-lg text-xs font-black border border-black bg-black text-white hover:bg-gray-900 transition-colors"
+                                >
+                                  Redeem
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </section>
+          );
+        })()}
+
+        {/* ── Redeem Code Dialog ── */}
+        {redeemTarget && (
+          <div
+            className="fixed inset-0 z-[300] flex items-center justify-center p-4"
+            style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+            onClick={(e) => { if (e.target === e.currentTarget) setRedeemTarget(null); }}
+          >
+            <div className="w-full max-w-xs rounded-2xl bg-white border border-black overflow-hidden">
+              <div className="px-5 py-4 border-b border-black flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] uppercase tracking-widest font-bold text-gray-500">Redeem Coupon</p>
+                  <p className="text-sm font-black text-black mt-0.5 truncate">{redeemTarget.name}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRedeemTarget(null)}
+                  className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-black text-sm bg-gray-100 rounded-full"
+                  aria-label="Close"
+                >✕</button>
+              </div>
+
+              <div className="px-5 py-5 flex flex-col gap-4">
+                <p className="text-xs text-gray-500">Ask the player to show their code, then enter it below to confirm redemption.</p>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-2">4-digit Coupon Code</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={4}
+                    placeholder="0000"
+                    value={redeemInput}
+                    autoFocus
+                    onChange={(e) => { setRedeemInput(e.target.value.replace(/\D/g, "").slice(0, 4)); setRedeemError(""); }}
+                    className="w-full px-4 py-3 rounded-xl border border-black text-center text-3xl font-mono font-black tracking-[0.5em] text-black outline-none focus:ring-2 focus:ring-black"
+                  />
+                </div>
+
+                {redeemError && (
+                  <p className="text-xs text-red-600 font-semibold text-center">{redeemError}</p>
+                )}
+
+                <button
+                  type="button"
+                  disabled={redeemInput.length !== 4 || redeemingId === redeemTarget.id}
+                  onClick={async () => {
+                    if (redeemInput !== redeemTarget.code) {
+                      setRedeemError("Incorrect code — check the player's screen and try again.");
+                      return;
+                    }
+                    await redeemCoupon(redeemTarget.id);
+                    setRedeemTarget(null);
+                  }}
+                  className="w-full py-3 rounded-xl border border-black bg-black text-white font-black text-sm disabled:opacity-40 transition-colors"
+                >
+                  {redeemingId === redeemTarget.id ? "Redeeming…" : "Confirm Redemption"}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         <div className="rounded-xl p-4 text-xs bg-white border border-black text-gray-600">

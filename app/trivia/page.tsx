@@ -13,55 +13,60 @@ export default function TriviaPage() {
     <>
       <Navbar />
 
-      <div className="relative min-h-screen">
-        {/* ── Backgrounds (same as hero) ── */}
-        <div
-          className="fixed inset-0 hidden sm:block"
-          style={{
-            backgroundImage: "url('/background_web.png')",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            backgroundRepeat: "no-repeat",
-            zIndex: 0,
-          }}
-        />
-        <div
-          className="fixed inset-0 sm:hidden"
-          style={{
-            backgroundImage: "url('/background_mobile.png')",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            backgroundRepeat: "no-repeat",
-            zIndex: 0,
-          }}
-        />
+      {/* ── Full-screen backgrounds ── */}
+      <div
+        className="fixed inset-0 hidden sm:block"
+        style={{
+          backgroundImage: "url('/background_web.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          zIndex: 0,
+        }}
+      />
+      <div
+        className="fixed inset-0 sm:hidden"
+        style={{
+          backgroundImage: "url('/background_mobile.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          zIndex: 0,
+        }}
+      />
+      {/* Dark vignette */}
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{ background: "rgba(0,0,0,0.82)", zIndex: 1 }}
+      />
+      {/* Bottom gradient fade */}
+      <div
+        className="fixed bottom-0 left-0 right-0 h-48 pointer-events-none"
+        style={{
+          background: "linear-gradient(to bottom, transparent, rgba(0,0,0,0.7))",
+          zIndex: 1,
+        }}
+      />
 
-        {/* Dark vignette */}
+      {/* ── Centered content column ── */}
+      <div
+        className="relative mx-auto min-h-screen"
+        style={{ maxWidth: "480px", zIndex: 10 }}
+      >
+        {/* Orange accent bar at top */}
         <div
-          className="fixed inset-0 pointer-events-none"
-          style={{ background: "rgba(0,0,0,0.82)", zIndex: 1 }}
-        />
-
-        {/* Bottom gradient fade */}
-        <div
-          className="fixed bottom-0 left-0 right-0 h-48 pointer-events-none"
-          style={{
-            background: "linear-gradient(to bottom, transparent, rgba(0,0,0,0.7))",
-            zIndex: 1,
-          }}
-        />
-
-        {/* Orange accent bar at top (sits just below navbar) */}
-        <div
-          className="fixed top-0 left-0 right-0 h-1 pointer-events-none"
+          className="absolute top-0 left-0 right-0 h-1 pointer-events-none"
           style={{
             background: "linear-gradient(90deg, #ee7e01, #ffb347, #ee7e01)",
             zIndex: 49,
           }}
         />
 
-        {/* ── Blue.png pinned to bottom (mobile only) ── */}
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 pointer-events-none flex justify-center" style={{ zIndex: 2 }}>
+        {/* Blue.png pinned to bottom of column */}
+        <div
+          className="absolute bottom-0 left-0 right-0 pointer-events-none flex justify-center"
+          style={{ zIndex: 2 }}
+        >
           <Image
             src="/Blue.png"
             alt=""
@@ -70,12 +75,15 @@ export default function TriviaPage() {
             priority
             className="w-full object-bottom"
             style={{ maxHeight: "120px", height: "auto" }}
-            sizes="100vw"
+            sizes="480px"
           />
         </div>
 
-        {/* ── coupon.png + text pinned to bottom (mobile only) ── */}
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 pointer-events-none flex flex-col items-center pb-4" style={{ zIndex: 3 }}>
+        {/* Coupon + text pinned to bottom of column */}
+        <div
+          className="absolute bottom-0 left-0 right-0 pointer-events-none flex flex-col items-center pb-4"
+          style={{ zIndex: 3 }}
+        >
           <Image
             src="/coupon.png"
             alt=""
@@ -83,7 +91,7 @@ export default function TriviaPage() {
             height={140}
             priority
             className="w-[18%] h-auto"
-            sizes="38vw"
+            sizes="86px"
           />
           <p className="text-white font-black text-lg tracking-widest uppercase mt-2 leading-tight text-center">
             Redeem Coupons
@@ -97,8 +105,8 @@ export default function TriviaPage() {
           </p>
         </div>
 
-        {/* Content */}
-        <div className="relative pt-16 sm:pb-0 pb-52" style={{ zIndex: 10 }}>
+        {/* Game content */}
+        <div className="relative pt-16 pb-52" style={{ zIndex: 10 }}>
           <TriviaClient />
         </div>
       </div>
