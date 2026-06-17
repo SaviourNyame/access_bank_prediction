@@ -247,30 +247,9 @@ export default function TriviaClient() {
   const timerPct   = totalTime > 0 ? (timeLeft / totalTime) * 100 : 0;
   const CIRCUM     = 2 * Math.PI * 28; // r=28
 
-  // ── Loading ──────────────────────────────────────────────────────────────────
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (questions.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh] text-center px-6">
-        <div>
-          <p className="text-4xl mb-4">🏆</p>
-          <p className="text-white font-black text-xl mb-2">No questions yet</p>
-          <p className="text-white/50 text-sm">Check back soon!</p>
-        </div>
-      </div>
-    );
-  }
-
   // ── Register ─────────────────────────────────────────────────────────────────
   if (phase === "register") {
-    const canSubmit = playerName.trim().length >= 2 && playerPhone.trim().length >= 7 && !submitting && !loading;
+    const canSubmit = playerName.trim().length >= 2 && playerPhone.trim().length >= 7 && !submitting && !loading && questions.length > 0;
     return (
       <div className="flex items-center justify-center min-h-[70vh] px-6">
         <div className="w-full max-w-sm">
@@ -314,7 +293,7 @@ export default function TriviaClient() {
             className="w-full rounded-2xl py-4 text-base font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40"
             style={{ background: "#ee7e01", color: "#fff" }}
           >
-            {submitting ? "Checking…" : "Start →"}
+            {loading ? "Loading…" : submitting ? "Checking…" : "Start →"}
           </button>
         </div>
       </div>
@@ -384,12 +363,12 @@ export default function TriviaClient() {
 
           <button
             type="button"
-            disabled={submitting || loading}
+            disabled={submitting || loading || questions.length === 0}
             onClick={() => void attemptPlay()}
             className="w-full rounded-2xl py-4 text-base font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40"
             style={{ background: "#ee7e01", color: "#fff" }}
           >
-            {submitting ? "Checking…" : "Start →"}
+            {loading ? "Loading…" : submitting ? "Checking…" : "Start →"}
           </button>
 
           <button
