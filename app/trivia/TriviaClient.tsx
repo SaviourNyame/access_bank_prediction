@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { addDoc, collection, getDocs, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -61,6 +61,9 @@ export default function TriviaClient() {
   const [blockReason, setBlockReason]     = useState("");
   const [forfeitConfirm, setForfeitConfirm] = useState(false);
 
+  const poolRef    = useRef<TriviaQuestion[]>([]); // full unmodified question pool
+  const seenIdsRef = useRef<Set<string>>(new Set()); // IDs shown across all attempts this session
+
   useEffect(() => {
     // Restore saved player and check for a previous win
     try {
@@ -87,9 +90,9 @@ export default function TriviaClient() {
       const snap = await getDocs(
         query(collection(db, "triviaQuestions"), orderBy("order", "asc")),
       );
-      setQuestions(
-        snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<TriviaQuestion, "id">) })),
-      );
+      const loaded = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<TriviaQuestion, "id">) }));
+      poolRef.current = loaded;
+      setQuestions(loaded);
       setLoading(false);
     }
     void load();
@@ -129,19 +132,31 @@ export default function TriviaClient() {
   }, [phase]);
 
   function startGame() {
-    setQuestions((all) => {
-      const hard  = shuffle(all.filter((q) => q.difficulty === "hard"));
-      const other = shuffle(all.filter((q) => q.difficulty !== "hard"));
-      // Interleave 2 hard : 1 other → more hard questions show up
-      const queue: TriviaQuestion[] = [];
-      let hi = 0, oi = 0;
-      while (hi < hard.length || oi < other.length) {
-        if (hi < hard.length)  queue.push(hard[hi++]);
-        if (hi < hard.length)  queue.push(hard[hi++]);
-        if (oi < other.length) queue.push(other[oi++]);
-      }
-      return queue;
-    });
+    const pool = poolRef.current;
+
+    // Filter out questions already seen this session; reset if pool nearly exhausted
+    let unseen = pool.filter((q) => !seenIdsRef.current.has(q.id));
+    if (unseen.length < 10) {
+      seenIdsRef.current.clear();
+      unseen = [...pool];
+    }
+
+    // Split by difficulty — easy/medium shown 2× more than hard
+    const lighter = shuffle(unseen.filter((q) => q.difficulty !== "hard"));
+    const hard    = shuffle(unseen.filter((q) => q.difficulty === "hard"));
+
+    const queue: TriviaQuestion[] = [];
+    let li = 0, hi = 0;
+    while (li < lighter.length || hi < hard.length) {
+      if (li < lighter.length) queue.push(lighter[li++]);
+      if (li < lighter.length) queue.push(lighter[li++]);
+      if (hi < hard.length)    queue.push(hard[hi++]);
+    }
+
+    // Mark every question in this game as seen so they won't repeat next attempt
+    queue.forEach((q) => seenIdsRef.current.add(q.id));
+
+    setQuestions(queue);
     setTotalTime(TOTAL_TIME);
     setTimeLeft(TOTAL_TIME);
     setPhase("playing");
