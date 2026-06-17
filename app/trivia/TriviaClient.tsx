@@ -119,6 +119,15 @@ export default function TriviaClient() {
     return () => clearTimeout(id);
   });
 
+  // Confetti burst on win — must be here (before early returns) to satisfy Rules of Hooks
+  useEffect(() => {
+    if (phase !== "won") return;
+    confetti({ particleCount: 120, spread: 80, origin: { y: 0.5 }, colors: ["#ee7e01", "#ffb347", "#fff", "#ffd700"] });
+    const id1 = setTimeout(() => confetti({ particleCount: 60, spread: 60, origin: { x: 0.1, y: 0.6 }, colors: ["#ee7e01", "#fff"] }), 400);
+    const id2 = setTimeout(() => confetti({ particleCount: 60, spread: 60, origin: { x: 0.9, y: 0.6 }, colors: ["#ee7e01", "#ffd700"] }), 700);
+    return () => { clearTimeout(id1); clearTimeout(id2); };
+  }, [phase]);
+
   function startGame() {
     setQuestions((all) => {
       const hard  = shuffle(all.filter((q) => q.difficulty === "hard"));
@@ -396,18 +405,6 @@ export default function TriviaClient() {
   }
 
   // ── Won ───────────────────────────────────────────────────────────────────────
-  // Fire confetti burst whenever the won screen is visible
-  useEffect(() => {
-    if (phase !== "won") return;
-    const burst = () => {
-      confetti({ particleCount: 120, spread: 80, origin: { y: 0.5 }, colors: ["#ee7e01", "#ffb347", "#fff", "#ffd700"] });
-    };
-    burst();
-    const id1 = setTimeout(() => confetti({ particleCount: 60, spread: 60, origin: { x: 0.1, y: 0.6 }, colors: ["#ee7e01", "#fff"] }), 400);
-    const id2 = setTimeout(() => confetti({ particleCount: 60, spread: 60, origin: { x: 0.9, y: 0.6 }, colors: ["#ee7e01", "#ffd700"] }), 700);
-    return () => { clearTimeout(id1); clearTimeout(id2); };
-  }, [phase]);
-
   if (phase === "won") {
     return (
       <div className="flex items-center justify-center min-h-[70vh] px-6">
