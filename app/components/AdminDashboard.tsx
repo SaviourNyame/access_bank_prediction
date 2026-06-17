@@ -284,6 +284,11 @@ export default function AdminDashboard() {
   const [redeemTarget, setRedeemTarget]     = useState<TriviaCoupon | null>(null);
   const [redeemInput, setRedeemInput]       = useState("");
   const [redeemError, setRedeemError]       = useState("");
+  const [resetTarget, setResetTarget]       = useState<TriviaCoupon | null>(null);
+  const [resettingId, setResettingId]       = useState<string | null>(null);
+  const [resetPhone, setResetPhone]         = useState("");
+  const [resetPhoneStatus, setResetPhoneStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [resetPhoneMsg, setResetPhoneMsg]   = useState("");
 
   // Poll football API for live + HT scores
   useEffect(() => {
@@ -599,6 +604,24 @@ export default function AdminDashboard() {
     } finally {
       setRedeemingId(null);
     }
+  }
+
+  async function resetAttemptsByPhone(phone: string, couponId?: string): Promise<number> {
+    const { query: fsQuery, where } = await import("firebase/firestore");
+    // Delete all triviaEntries for this phone
+    const entriesSnap = await getDocs(fsQuery(collection(db, "triviaEntries"), where("phone", "==", phone)));
+    await Promise.all(entriesSnap.docs.map((d) => deleteDoc(doc(db, "triviaEntries", d.id))));
+    // Delete coupon record if provided
+    if (couponId) {
+      await deleteDoc(doc(db, "triviaCoupons", couponId));
+      setCoupons((prev) => prev.filter((c) => c.id !== couponId));
+    } else {
+      // also remove any coupon by phone
+      const couponSnap = await getDocs(fsQuery(collection(db, "triviaCoupons"), where("phone", "==", phone)));
+      await Promise.all(couponSnap.docs.map((d) => deleteDoc(doc(db, "triviaCoupons", d.id))));
+      setCoupons((prev) => prev.filter((c) => c.phone !== phone));
+    }
+    return entriesSnap.size;
   }
 
   useEffect(() => {
@@ -1891,19 +1914,28 @@ export default function AdminDashboard() {
                               {c.wonAt ? new Date(c.wonAt).toLocaleString() : "—"}
                             </td>
                             <td className="py-3 pr-5 text-right">
-                              {c.redeemed ? (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-black text-white">
-                                  ✓ Redeemed
-                                </span>
-                              ) : (
+                              <div className="flex items-center justify-end gap-2">
+                                {c.redeemed ? (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-black text-white">
+                                    ✓ Redeemed
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => { setRedeemTarget(c); setRedeemInput(""); setRedeemError(""); }}
+                                    className="px-4 py-2 rounded-lg text-xs font-black border border-black bg-black text-white hover:bg-gray-900 transition-colors"
+                                  >
+                                    Redeem
+                                  </button>
+                                )}
                                 <button
                                   type="button"
-                                  onClick={() => { setRedeemTarget(c); setRedeemInput(""); setRedeemError(""); }}
-                                  className="px-4 py-2 rounded-lg text-xs font-black border border-black bg-black text-white hover:bg-gray-900 transition-colors"
+                                  onClick={() => setResetTarget(c)}
+                                  className="px-3 py-2 rounded-lg text-xs font-bold border border-red-300 text-red-500 hover:bg-red-50 transition-colors"
                                 >
-                                  Redeem
+                                  Reset
                                 </button>
-                              )}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -1912,9 +1944,100 @@ export default function AdminDashboard() {
                   </div>
                 )}
               </div>
+              {/* Reset by phone panel */}
+              <div className="rounded-2xl bg-white border border-black overflow-hidden">
+                <div className="px-5 py-4 border-b border-black">
+                  <h2 className="text-base font-black text-black">Reset Attempts by Phone</h2>
+                  <p className="text-xs text-gray-500 mt-1">For players who haven&apos;t won but hit the attempt limit.</p>
+                </div>
+                <div className="px-5 py-4 flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+                  <div className="flex-1">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Phone Number</label>
+                    <input
+                      type="tel"
+                      placeholder="e.g. 0241234567"
+                      value={resetPhone}
+                      onChange={(e) => { setResetPhone(e.target.value); setResetPhoneStatus("idle"); setResetPhoneMsg(""); }}
+                      className="w-full rounded-xl border border-black px-4 py-2.5 text-sm text-black outline-none focus:ring-2 focus:ring-black"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!resetPhone.trim() || resetPhoneStatus === "loading"}
+                    onClick={async () => {
+                      setResetPhoneStatus("loading");
+                      setResetPhoneMsg("");
+                      try {
+                        const deleted = await resetAttemptsByPhone(resetPhone.trim());
+                        setResetPhoneMsg(`Done — removed ${deleted} entry${deleted !== 1 ? "ies" : "y"} for ${resetPhone.trim()}.`);
+                        setResetPhoneStatus("done");
+                        setResetPhone("");
+                      } catch {
+                        setResetPhoneMsg("Failed to reset. Try again.");
+                        setResetPhoneStatus("error");
+                      }
+                    }}
+                    className="px-5 py-2.5 rounded-xl text-sm font-black border border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition-colors disabled:opacity-40 whitespace-nowrap"
+                  >
+                    {resetPhoneStatus === "loading" ? "Resetting…" : "Reset Attempts"}
+                  </button>
+                </div>
+                {resetPhoneMsg && (
+                  <div className={`px-5 pb-4 text-xs font-semibold ${resetPhoneStatus === "done" ? "text-green-600" : "text-red-600"}`}>
+                    {resetPhoneMsg}
+                  </div>
+                )}
+              </div>
             </section>
           );
         })()}
+
+        {/* ── Reset Confirmation Dialog ── */}
+        {resetTarget && (
+          <div
+            className="fixed inset-0 z-[300] flex items-center justify-center p-4"
+            style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+            onClick={(e) => { if (e.target === e.currentTarget) setResetTarget(null); }}
+          >
+            <div className="w-full max-w-xs rounded-2xl bg-white border border-black overflow-hidden">
+              <div className="px-5 py-4 border-b border-black flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] uppercase tracking-widest font-bold text-red-500">Reset Attempts</p>
+                  <p className="text-sm font-black text-black mt-0.5 truncate">{resetTarget.name}</p>
+                </div>
+                <button type="button" onClick={() => setResetTarget(null)}
+                  className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-black text-sm bg-gray-100 rounded-full">✕</button>
+              </div>
+              <div className="px-5 py-5 flex flex-col gap-4">
+                <p className="text-sm text-gray-600">
+                  This will delete all trivia entries and the coupon for <span className="font-bold text-black">{resetTarget.name}</span> ({resetTarget.phone}), allowing them to play again from scratch.
+                </p>
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setResetTarget(null)}
+                    className="flex-1 py-2.5 rounded-xl border border-black text-sm font-bold">
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={resettingId === resetTarget.id}
+                    onClick={async () => {
+                      setResettingId(resetTarget.id);
+                      try {
+                        await resetAttemptsByPhone(resetTarget.phone, resetTarget.id);
+                        setResetTarget(null);
+                      } finally {
+                        setResettingId(null);
+                      }
+                    }}
+                    className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-black disabled:opacity-40"
+                  >
+                    {resettingId === resetTarget.id ? "Resetting…" : "Yes, Reset"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Redeem Code Dialog ── */}
         {redeemTarget && (
