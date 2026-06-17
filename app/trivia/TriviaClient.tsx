@@ -443,9 +443,18 @@ export default function TriviaClient() {
             </div>
           </div>
 
-          <p className="text-white/40 text-xs text-center">
+          <p className="text-white/40 text-xs text-center mb-6">
             Each player can only win once. Visit the redemption desk to claim your prize.
           </p>
+
+          <button
+            type="button"
+            onClick={changeProfile}
+            className="w-full rounded-2xl py-4 text-base font-black uppercase tracking-widest transition-all active:scale-95"
+            style={{ background: "rgba(255,255,255,0.12)", border: "1.5px solid rgba(255,255,255,0.2)", color: "#fff" }}
+          >
+            Start Again
+          </button>
         </div>
       </div>
     );
