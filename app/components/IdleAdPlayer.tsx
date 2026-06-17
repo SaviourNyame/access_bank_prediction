@@ -71,8 +71,8 @@ export default function IdleAdPlayer() {
 
   return (
     <div
-      className="fixed inset-0 bg-black"
-      style={{ zIndex: 99999 }}
+      className="fixed inset-0 bg-black flex items-center justify-center"
+      style={{ zIndex: 99999, width: "100dvw", height: "100dvh" }}
       onClick={() => {
         setShowX(true);
         if (xTimerRef.current) clearTimeout(xTimerRef.current);
@@ -81,10 +81,15 @@ export default function IdleAdPlayer() {
     >
       <video
         ref={videoRef}
-        className="w-full h-full object-cover"
-        muted
         playsInline
+        muted
         onEnded={() => setAdIndex((i) => (i + 1) % ADS.length)}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          display: "block",
+        }}
       >
         <source src={ADS[adIndex]} type="video/mp4" />
       </video>
@@ -94,10 +99,14 @@ export default function IdleAdPlayer() {
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); dismiss(); }}
-          className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center"
-          style={{ background: "rgba(0,0,0,0.35)", border: "1.5px solid rgba(255,255,255,0.3)" }}
+          className="absolute top-4 right-4 w-12 h-12 rounded-full flex items-center justify-center"
+          style={{
+            background: "rgba(0,0,0,0.5)",
+            border: "1.5px solid rgba(255,255,255,0.4)",
+            zIndex: 1,
+          }}
         >
-          <span className="text-white/80 text-lg font-black leading-none">✕</span>
+          <span className="text-white text-lg font-black leading-none">✕</span>
         </button>
       )}
     </div>
