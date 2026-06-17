@@ -66,7 +66,7 @@ export default function IdleAdPlayer() {
     v.play().catch(() => {});
   }, [active, adIndex]);
 
-  if (pathname?.startsWith("/admin")) return null;
+  if (pathname?.startsWith("/admin") || pathname?.startsWith("/coupon-admin")) return null;
   if (!active) return null;
 
   return (

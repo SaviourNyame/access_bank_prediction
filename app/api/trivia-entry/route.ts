@@ -28,21 +28,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ allowed: false, reason: "already_won" });
     }
 
-    // Block duplicate phone on first-time registration
-    if (isFirstTime) {
-      const phoneSnap = await getDocs(
-        query(collection(db, "triviaEntries"), where("phone", "==", phone)),
-      );
-      if (phoneSnap.size > 0) {
-        return NextResponse.json({ allowed: false, reason: "phone_taken" });
-      }
+    // Check how many times this phone number has played
+    const phoneSnap = await getDocs(
+      query(collection(db, "triviaEntries"), where("phone", "==", phone)),
+    );
+
+    // Block duplicate phone on first-time registration (phone belongs to someone else)
+    if (isFirstTime && phoneSnap.size > 0) {
+      return NextResponse.json({ allowed: false, reason: "phone_taken" });
     }
 
-    // Block if IP has hit the play limit
-    const ipSnap = await getDocs(
-      query(collection(db, "triviaEntries"), where("ip", "==", ip)),
-    );
-    if (ipSnap.size >= MAX_PLAYS) {
+    // Block if this phone profile has hit the play limit
+    if (phoneSnap.size >= MAX_PLAYS) {
       return NextResponse.json({ allowed: false, reason: "limit_reached" });
     }
 

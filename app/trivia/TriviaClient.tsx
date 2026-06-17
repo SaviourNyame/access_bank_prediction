@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { addDoc, collection, getDocs, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import confetti from "canvas-confetti";
 
 type Option = "A" | "B" | "C" | "D";
 
@@ -395,6 +396,18 @@ export default function TriviaClient() {
   }
 
   // ── Won ───────────────────────────────────────────────────────────────────────
+  // Fire confetti burst whenever the won screen is visible
+  useEffect(() => {
+    if (phase !== "won") return;
+    const burst = () => {
+      confetti({ particleCount: 120, spread: 80, origin: { y: 0.5 }, colors: ["#ee7e01", "#ffb347", "#fff", "#ffd700"] });
+    };
+    burst();
+    const id1 = setTimeout(() => confetti({ particleCount: 60, spread: 60, origin: { x: 0.1, y: 0.6 }, colors: ["#ee7e01", "#fff"] }), 400);
+    const id2 = setTimeout(() => confetti({ particleCount: 60, spread: 60, origin: { x: 0.9, y: 0.6 }, colors: ["#ee7e01", "#ffd700"] }), 700);
+    return () => { clearTimeout(id1); clearTimeout(id2); };
+  }, [phase]);
+
   if (phase === "won") {
     return (
       <div className="flex items-center justify-center min-h-[70vh] px-6">
@@ -430,9 +443,18 @@ export default function TriviaClient() {
             </div>
           </div>
 
-          <p className="text-white/40 text-xs text-center">
+          <p className="text-white/40 text-xs text-center mb-6">
             Each player can only win once. Visit the redemption desk to claim your prize.
           </p>
+
+          <button
+            type="button"
+            onClick={changeProfile}
+            className="w-full rounded-2xl py-4 text-base font-black uppercase tracking-widest transition-all active:scale-95"
+            style={{ background: "rgba(255,255,255,0.12)", border: "1.5px solid rgba(255,255,255,0.2)", color: "#fff" }}
+          >
+            Start Again
+          </button>
         </div>
       </div>
     );
