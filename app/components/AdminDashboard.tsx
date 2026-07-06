@@ -587,6 +587,45 @@ export default function AdminDashboard() {
     }
   }
 
+  const [exporting, setExporting] = useState(false);
+
+  async function exportTriviaEntries() {
+    setExporting(true);
+    try {
+      const { query: fsQuery, orderBy: fsOrderBy } = await import("firebase/firestore");
+      const snap = await getDocs(fsQuery(collection(db, "triviaEntries"), fsOrderBy("createdAt", "asc")));
+
+      type EntryDoc = { name?: string; phone?: string; createdAt?: string };
+      const rows = snap.docs.map((d) => {
+        const data = d.data() as EntryDoc;
+        return {
+          name: data.name ?? "",
+          phone: data.phone ?? "",
+          date: data.createdAt ? new Date(data.createdAt).toLocaleString() : "",
+        };
+      });
+
+      const header = ["Name", "Phone", "Date Played"];
+      const csvRows = [
+        header.join(","),
+        ...rows.map((r) =>
+          [r.name, r.phone, r.date]
+            .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+            .join(","),
+        ),
+      ];
+      const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
+      a.download = `trivia-entries-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function resetAttemptsByPhone(phone: string, couponId?: string): Promise<number> {
     const { query: fsQuery, where } = await import("firebase/firestore");
     // Delete all triviaEntries for this phone
@@ -1855,8 +1894,8 @@ export default function AdminDashboard() {
 
           return (
             <section className="space-y-4">
-              {/* Stats */}
-              <div className="grid grid-cols-3 gap-3">
+              {/* Stats + Export */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="rounded-2xl bg-white p-5 border border-black">
                   <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Total Won</p>
                   <p className="text-3xl font-black text-black mt-2">{totalCoupons}</p>
@@ -1868,6 +1907,20 @@ export default function AdminDashboard() {
                 <div className="rounded-2xl bg-white p-5 border border-black">
                   <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Pending</p>
                   <p className="text-3xl font-black text-black mt-2">{pendingCount}</p>
+                </div>
+                <div className="rounded-2xl bg-white p-5 border border-black flex flex-col justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Export</p>
+                    <p className="text-xs text-gray-400 mt-1">All trivia entries as CSV</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void exportTriviaEntries()}
+                    disabled={exporting}
+                    className="w-full py-2 rounded-xl border border-black bg-black text-white text-xs font-black hover:bg-gray-900 transition-colors disabled:opacity-40"
+                  >
+                    {exporting ? "Exporting…" : "↓ Export CSV"}
+                  </button>
                 </div>
               </div>
 
