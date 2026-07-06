@@ -596,21 +596,31 @@ export default function AdminDashboard() {
       const snap = await getDocs(fsQuery(collection(db, "triviaEntries"), fsOrderBy("createdAt", "asc")));
 
       type EntryDoc = { name?: string; phone?: string; createdAt?: string };
-      const rows = snap.docs.map((d) => {
-        const data = d.data() as EntryDoc;
-        return {
-          name: data.name ?? "",
-          phone: data.phone ?? "",
-          date: data.createdAt ? new Date(data.createdAt).toLocaleString() : "",
-        };
-      });
 
-      const header = ["Name", "Phone", "Date Played"];
+      // Merge rows by phone — one row per unique contact
+      const byPhone = new Map<string, { name: string; phone: string; attempts: number; firstPlayed: string; lastPlayed: string }>();
+      for (const d of snap.docs) {
+        const data = d.data() as EntryDoc;
+        const phone = data.phone?.trim() ?? "";
+        const name  = data.name?.trim() ?? "";
+        const date  = data.createdAt ?? "";
+        if (!phone) continue;
+        const existing = byPhone.get(phone);
+        if (existing) {
+          existing.attempts += 1;
+          if (date > existing.lastPlayed) existing.lastPlayed = date;
+        } else {
+          byPhone.set(phone, { name, phone, attempts: 1, firstPlayed: date, lastPlayed: date });
+        }
+      }
+
+      const fmt = (iso: string) => iso ? new Date(iso).toLocaleString() : "";
+      const header = ["Name", "Phone", "Attempts", "First Played", "Last Played"];
       const csvRows = [
         header.join(","),
-        ...rows.map((r) =>
-          [r.name, r.phone, r.date]
-            .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+        ...[...byPhone.values()].map((r) =>
+          [r.name, r.phone, String(r.attempts), fmt(r.firstPlayed), fmt(r.lastPlayed)]
+            .map((v) => `"${v.replace(/"/g, '""')}"`)
             .join(","),
         ),
       ];
