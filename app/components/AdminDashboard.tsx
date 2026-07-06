@@ -16,8 +16,6 @@ import {
 } from "firebase/firestore";
 import {
   onAuthStateChanged,
-  isSignInWithEmailLink,
-  signInWithEmailLink,
   type User,
 } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
@@ -336,25 +334,6 @@ export default function AdminDashboard() {
     });
 
     return () => unsub();
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!isSignInWithEmailLink(auth, window.location.href)) return;
-
-    const email =
-      window.localStorage.getItem("emailForSignIn") ??
-      window.prompt("Please enter your email to complete sign-in") ??
-      "";
-
-    if (!email) return;
-
-    signInWithEmailLink(auth, email, window.location.href)
-      .then(() => {
-        window.localStorage.removeItem("emailForSignIn");
-        window.history.replaceState({}, document.title, window.location.pathname);
-      })
-      .catch(console.error);
   }, []);
 
   useEffect(() => {

@@ -5,7 +5,6 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   updateProfile,
-  sendSignInLinkToEmail,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
@@ -24,7 +23,6 @@ export default function AuthDialog({
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [linkSent, setLinkSent] = useState(false);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -67,13 +65,8 @@ export default function AuthDialog({
 
     try {
       if (tab === "signin") {
-        const actionCodeSettings = {
-          url: window.location.href,
-          handleCodeInApp: true,
-        };
-        await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-        window.localStorage.setItem("emailForSignIn", email);
-        setLinkSent(true);
+        await signInWithEmailAndPassword(auth, email, password);
+        onSuccess();
       } else {
         const cred = await createUserWithEmailAndPassword(auth, email, password);
         if (name.trim()) {
@@ -134,7 +127,7 @@ export default function AuthDialog({
             <button
               key={t}
               type="button"
-              onClick={() => { setTab(t); setError(""); setLinkSent(false); }}
+              onClick={() => { setTab(t); setError(""); }}
               className="flex-1 py-3 text-sm font-bold transition-colors"
               style={{
                 color: tab === t ? "#ee7e01" : "#9ca3af",
@@ -149,23 +142,7 @@ export default function AuthDialog({
 
 
         {/* Form */}
-        {tab === "signin" && linkSent ? (
-          <div className="px-6 py-8 flex flex-col items-center gap-3 text-center">
-            <p className="text-2xl">✉️</p>
-            <p className="text-base font-black text-gray-900">Check your email</p>
-            <p className="text-sm text-gray-600">
-              We sent a sign-in link to <strong>{email}</strong>. Click the link to sign in.
-            </p>
-            <button
-              type="button"
-              onClick={() => { setLinkSent(false); setError(""); }}
-              className="mt-2 text-xs font-semibold underline text-gray-500"
-            >
-              Use a different email
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="px-6 py-5 flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="px-6 py-5 flex flex-col gap-4">
             {tab === "signup" && (
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">
@@ -184,11 +161,12 @@ export default function AuthDialog({
 
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                {tab === "signin" ? "Email Address" : "Email Address"}
+                Email Address
               </label>
               <input
                 type="email"
                 required
+                autoComplete="username"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -196,28 +174,21 @@ export default function AuthDialog({
               />
             </div>
 
-            {tab === "signup" && (
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl text-sm text-gray-900 placeholder-gray-400 outline-none transition-all border border-gray-200 focus:border-[#ee7e01] bg-gray-50 focus:bg-white"
-                />
-              </div>
-            )}
-
-            {tab === "signin" && (
-              <p className="text-xs text-gray-500">
-                We&apos;ll email you a sign-in link — no password needed.
-              </p>
-            )}
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                Password
+              </label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                autoComplete={tab === "signin" ? "current-password" : "new-password"}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl text-sm text-gray-900 placeholder-gray-400 outline-none transition-all border border-gray-200 focus:border-[#ee7e01] bg-gray-50 focus:bg-white"
+              />
+            </div>
 
             {error && (
               <p className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
@@ -233,7 +204,7 @@ export default function AuthDialog({
               {loading
                 ? "Please wait…"
                 : tab === "signin"
-                ? "Send Sign-In Link →"
+                ? "Sign In →"
                 : "Create Account & Predict →"}
             </button>
 
@@ -265,7 +236,6 @@ export default function AuthDialog({
               )}
             </p>
           </form>
-        )}
       </div>
     </div>
   );
