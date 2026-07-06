@@ -193,6 +193,8 @@ export default function AdminDashboard() {
   const [checkingAccess, setCheckingAccess] = useState(false);
   const [accessError, setAccessError] = useState("");
 
+  const [triviaParticipants, setTriviaParticipants] = useState<number | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<DashboardUser[]>([]);
   const [error, setError] = useState<string>("");
@@ -680,6 +682,16 @@ export default function AdminDashboard() {
     }
 
     void loadUsers();
+
+    async function loadTriviaParticipants() {
+      try {
+        const snap = await getDocs(collection(db, "triviaEntries"));
+        const phones = new Set(snap.docs.map((d) => (d.data() as { phone?: string }).phone ?? ""));
+        phones.delete("");
+        setTriviaParticipants(phones.size);
+      } catch { /* silent */ }
+    }
+    void loadTriviaParticipants();
   }, [authReady, user, isAdmin, checkingAccess]);
 
   const totals = useMemo(() => {
@@ -1175,7 +1187,7 @@ export default function AdminDashboard() {
         })()}
 
         {activeTab === "home" && (
-          <section id="home" className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <section id="home" className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             <div className="rounded-2xl bg-white p-5 border border-black">
               <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">
                 Signups
@@ -1198,6 +1210,14 @@ export default function AdminDashboard() {
               </p>
               <p className="text-3xl font-black text-black mt-2">
                 {totals.activePredictors}
+              </p>
+            </div>
+            <div className="rounded-2xl bg-white p-5 border border-black">
+              <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">
+                Trivia Players
+              </p>
+              <p className="text-3xl font-black text-black mt-2">
+                {triviaParticipants ?? "—"}
               </p>
             </div>
           </section>
