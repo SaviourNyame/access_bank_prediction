@@ -558,6 +558,19 @@ export default function AdminDashboard() {
     }
   }
 
+  const [clearing, setClearing] = useState(false);
+  async function clearAllTriviaQuestions() {
+    if (!window.confirm("Delete ALL trivia questions? This cannot be undone.")) return;
+    setClearing(true);
+    try {
+      const snap = await getDocs(collection(db, "triviaQuestions"));
+      await Promise.all(snap.docs.map((d) => deleteDoc(doc(db, "triviaQuestions", d.id))));
+      setTriviaQuestions([]);
+    } finally {
+      setClearing(false);
+    }
+  }
+
   async function loadCoupons() {
     setCouponsLoading(true);
     try {
@@ -1779,14 +1792,24 @@ export default function AdminDashboard() {
                 <h2 className="text-lg font-black text-black">Trivia Questions</h2>
                 <p className="text-xs text-gray-500 mt-1">Add questions that appear on the /trivia page.</p>
               </div>
-              <button
-                type="button"
-                onClick={() => void seedTriviaQuestions()}
-                disabled={seeding}
-                className="px-4 py-2 rounded-xl text-xs font-black border border-black bg-white hover:bg-black hover:text-white transition-colors disabled:opacity-50 flex-shrink-0"
-              >
-                {seeding ? "Loading…" : `⚽ Load ${TRIVIA_SEEDS.length} Sample Questions`}
-              </button>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => void clearAllTriviaQuestions()}
+                  disabled={clearing || seeding}
+                  className="px-4 py-2 rounded-xl text-xs font-black border border-red-600 text-red-600 bg-white hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50 flex-shrink-0"
+                >
+                  {clearing ? "Clearing…" : "🗑 Clear All Questions"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void seedTriviaQuestions()}
+                  disabled={seeding || clearing}
+                  className="px-4 py-2 rounded-xl text-xs font-black border border-black bg-white hover:bg-black hover:text-white transition-colors disabled:opacity-50 flex-shrink-0"
+                >
+                  {seeding ? "Loading…" : `⚽ Load ${TRIVIA_SEEDS.length} Questions`}
+                </button>
+              </div>
             </div>
 
             {/* Add question form */}
