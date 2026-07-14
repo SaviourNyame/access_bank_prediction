@@ -576,9 +576,10 @@ export default function TriviaClient() {
           let border  = "1.5px solid #c87e00";
           let color   = "#3b2000";
 
+          const answeredCorrectly = selected === q.correct;
           if (revealed) {
-            if (isCorrect) { bg = "#dcfce7"; border = "1.5px solid #22c55e"; color = "#15803d"; }
-            else if (isSelected) { bg = "#fee2e2"; border = "1.5px solid #ef4444"; color = "#b91c1c"; }
+            if (isSelected && answeredCorrectly) { bg = "#dcfce7"; border = "1.5px solid #22c55e"; color = "#15803d"; }
+            else if (isSelected && !answeredCorrectly) { bg = "#fee2e2"; border = "1.5px solid #ef4444"; color = "#b91c1c"; }
             else { bg = "linear-gradient(135deg, rgba(255,224,102,0.3) 0%, rgba(200,126,0,0.3) 100%)"; color = "rgba(59,32,0,0.4)"; border = "1.5px solid rgba(200,126,0,0.2)"; }
           }
 
@@ -592,8 +593,8 @@ export default function TriviaClient() {
               style={{ background: bg, color }}
             >
               <span className="font-black mr-2">{opt}.</span>{q.options[opt]}
-              {revealed && isCorrect  && <span className="ml-2">✓</span>}
-              {revealed && isSelected && !isCorrect && <span className="ml-2">✗</span>}
+              {revealed && isSelected && answeredCorrectly  && <span className="ml-2">✓</span>}
+              {revealed && isSelected && !answeredCorrectly && <span className="ml-2">✗</span>}
             </button>
           );
         })}
