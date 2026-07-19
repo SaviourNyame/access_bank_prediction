@@ -589,9 +589,15 @@ export default function TriviaClient() {
               type="button"
               disabled={revealed}
               onClick={() => handleAnswer(opt)}
-              className="w-full rounded-2xl py-4 text-center font-bold text-sm transition-all active:scale-[0.98] disabled:cursor-default"
+              className="relative w-full rounded-2xl py-4 text-center font-bold text-sm transition-all active:scale-[0.98] disabled:cursor-default overflow-hidden"
               style={{ background: bg, color }}
             >
+              {revealed && isCorrect && (
+                <span
+                  className="absolute top-1.5 left-1.5 w-2 h-2 rounded-full"
+                  style={{ background: "rgba(34,197,94,0.32)" }}
+                />
+              )}
               <span className="font-black mr-2">{opt}.</span>{q.options[opt]}
               {revealed && isSelected && answeredCorrectly  && <span className="ml-2">✓</span>}
               {revealed && isSelected && !answeredCorrectly && <span className="ml-2">✗</span>}
