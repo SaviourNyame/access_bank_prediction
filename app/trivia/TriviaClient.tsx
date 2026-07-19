@@ -592,7 +592,7 @@ export default function TriviaClient() {
               className="relative w-full rounded-2xl py-4 text-center font-bold text-sm transition-all active:scale-[0.98] disabled:cursor-default overflow-hidden"
               style={{ background: bg, color }}
             >
-              {revealed && isCorrect && (
+              {!revealed && isCorrect && (
                 <span
                   className="absolute top-1.5 left-1.5 w-2 h-2 rounded-full"
                   style={{ background: "rgba(34,197,94,0.32)" }}
