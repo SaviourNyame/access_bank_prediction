@@ -584,7 +584,7 @@ export default function TriviaClient() {
           }
 
           const glowShadow = !revealed && isCorrect
-            ? "inset 0 0 20px rgba(34,197,94,0.3)"
+            ? "inset 0 0 18px rgba(255,255,255,0.18)"
             : undefined;
 
           return (
